@@ -1,0 +1,441 @@
+'use server';
+
+// Server Actions for Blog Management
+import dbConnect from '../db';
+import Blog from '../models/Blog';
+import { cookies } from 'next/headers';
+import { verifyToken } from '../auth';
+
+/**
+ * Get all blog posts (for admin dashboard)
+ * @returns {Array} Array of all blog posts
+ */
+export async function getAllBlogsForAdmin() {
+  try {
+    await dbConnect();
+    const blogs = await Blog.find()
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 });
+    return { success: true, blogs: JSON.parse(JSON.stringify(blogs)) };
+  } catch (error) {
+    console.error('Get all blogs error:', error);
+    return { success: false, message: 'Failed to fetch blogs' };
+  }
+}
+
+/**
+ * Get blog by ID
+ * @param {string} blogId - Blog ID or Slug
+ * @returns {Object} Blog post
+ */
+export async function getBlogById(blogId) {
+  try {
+    await dbConnect();
+    
+    // Check if it's a valid ObjectId (24 hex characters)
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(blogId);
+    
+    let blog;
+    if (isValidObjectId) {
+      // It's a valid ObjectId, try to find by ID
+      blog = await Blog.findById(blogId).populate('author', 'name email');
+    } else {
+      // It's likely a slug, try to find by slug
+      blog = await Blog.findOne({ slug: blogId }).populate('author', 'name email');
+    }
+    
+    if (!blog) {
+      return { success: false, message: 'Blog not found' };
+    }
+    
+    return { success: true, blog: JSON.parse(JSON.stringify(blog)) };
+  } catch (error) {
+    console.error('Get blog by ID error:', error);
+    return { success: false, message: 'Failed to fetch blog' };
+  }
+}
+
+/**
+ * Get blog by slug
+ * @param {string} slug - Blog slug
+ * @returns {Object} Blog post
+ */
+export async function getBlogBySlug(slug) {
+  try {
+    await dbConnect();
+    const blog = await Blog.findOne({ slug }).populate('author', 'name email');
+    
+    if (!blog) {
+      return { success: false, message: 'Blog not found' };
+    }
+    
+    // Increment views
+    await Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } });
+    
+    return { success: true, blog: JSON.parse(JSON.stringify(blog)) };
+  } catch (error) {
+    console.error('Get blog by slug error:', error);
+    return { success: false, message: 'Failed to fetch blog' };
+  }
+}
+
+/**
+ * Create new blog post
+ * @param {Object} blogData - Blog data
+ * @returns {Object} Result object
+ */
+export async function createBlog(blogData) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
+      return { success: false, message: 'Please login to create a blog' };
+    }
+    
+    const decoded = verifyToken(token);
+    
+    if (!decoded) {
+      return { success: false, message: 'Invalid token' };
+    }
+    
+    await dbConnect();
+    
+    // Generate slug from title
+    const slug = blogData.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') + '-' + Date.now();
+    
+    const blog = await Blog.create({
+      ...blogData,
+      slug,
+      author: decoded.userId,
+    });
+    
+    return { success: true, message: 'Blog created successfully', blog: JSON.parse(JSON.stringify(blog)) };
+  } catch (error) {
+    console.error('Create blog error:', error);
+    return { success: false, message: 'Failed to create blog' };
+  }
+}
+
+/**
+ * Update blog post
+ * @param {string} blogId - Blog ID
+ * @param {Object} blogData - Updated blog data
+ * @returns {Object} Result object
+ */
+export async function updateBlog(blogId, blogData) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
+      return { success: false, message: 'Please login to update a blog' };
+    }
+    
+    const decoded = verifyToken(token);
+    
+    if (!decoded) {
+      return { success: false, message: 'Invalid token' };
+    }
+    
+    await dbConnect();
+    
+    const blog = await Blog.findById(blogId);
+    
+    if (!blog) {
+      return { success: false, message: 'Blog not found' };
+    }
+    
+    // Check if user is the author or admin
+    if (blog.author.toString() !== decoded.userId && decoded.role !== 'admin' && decoded.role !== 'superadmin') {
+      return { success: false, message: 'Not authorized to update this blog' };
+    }
+    
+    const updatedBlog = await Blog.findByIdAndUpdate(blogId, blogData, { new: true });
+    
+    return { success: true, message: 'Blog updated successfully', blog: JSON.parse(JSON.stringify(updatedBlog)) };
+  } catch (error) {
+    console.error('Update blog error:', error);
+    return { success: false, message: 'Failed to update blog' };
+  }
+}
+
+/**
+ * Delete blog post
+ * @param {string} blogId - Blog ID
+ * @returns {Object} Result object
+ */
+export async function deleteBlog(blogId) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
+      return { success: false, message: 'Please login to delete a blog' };
+    }
+    
+    const decoded = verifyToken(token);
+    
+    if (!decoded) {
+      return { success: false, message: 'Invalid token' };
+    }
+    
+    await dbConnect();
+    
+    const blog = await Blog.findById(blogId);
+    
+    if (!blog) {
+      return { success: false, message: 'Blog not found' };
+    }
+    
+    // Check if user is the author or admin
+    if (blog.author.toString() !== decoded.userId && decoded.role !== 'admin' && decoded.role !== 'superadmin') {
+      return { success: false, message: 'Not authorized to delete this blog' };
+    }
+    
+    await Blog.findByIdAndDelete(blogId);
+    
+    return { success: true, message: 'Blog deleted successfully' };
+  } catch (error) {
+    console.error('Delete blog error:', error);
+    return { success: false, message: 'Failed to delete blog' };
+  }
+}
+
+/**
+ * Toggle blog active status
+ * @param {string} blogId - Blog ID
+ * @returns {Object} Result object
+ */
+export async function toggleBlogStatus(blogId) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
+      return { success: false, message: 'Please login to toggle blog status' };
+    }
+    
+    const decoded = verifyToken(token);
+    
+    if (!decoded) {
+      return { success: false, message: 'Invalid token' };
+    }
+    
+    await dbConnect();
+    
+    const blog = await Blog.findById(blogId);
+    
+    if (!blog) {
+      return { success: false, message: 'Blog not found' };
+    }
+    
+    // Check if user is the author or admin
+    if (blog.author.toString() !== decoded.userId && decoded.role !== 'admin' && decoded.role !== 'superadmin') {
+      return { success: false, message: 'Not authorized to update this blog' };
+    }
+    
+    const updatedBlog = await Blog.findByIdAndUpdate(
+      blogId,
+      { isActive: !blog.isActive },
+      { new: true }
+    );
+    
+    return { 
+      success: true, 
+      message: updatedBlog.isActive ? 'Blog activated successfully' : 'Blog deactivated successfully',
+      blog: JSON.parse(JSON.stringify(updatedBlog))
+    };
+  } catch (error) {
+    console.error('Toggle blog status error:', error);
+    return { success: false, message: 'Failed to toggle blog status' };
+  }
+}
+
+/**
+ * Get all published blogs (for public homepage)
+ * @param {number} limit - Number of blogs to fetch
+ * @returns {Array} Array of published blogs
+ */
+export async function getPublishedBlogs(limit = 10) {
+  try {
+    await dbConnect();
+    const blogs = await Blog.find({ status: 'published', isActive: true })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+    return { success: true, blogs: JSON.parse(JSON.stringify(blogs)) };
+  } catch (error) {
+    console.error('Get published blogs error:', error);
+    return { success: false, message: 'Failed to fetch blogs' };
+  }
+}
+
+/**
+ * Get latest blogs for homepage
+ * @returns {Object} Object with featured blog and recent blogs
+ */
+export async function getLatestBlogs() {
+  try {
+    await dbConnect();
+    
+    // Get the latest published blog (featured)
+    const featuredBlog = await Blog.find({ status: 'published', isActive: true })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(1);
+    
+    // Get next 4 recent blogs for sidebar
+    const recentBlogs = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      _id: { $ne: featuredBlog[0]?._id }
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(4);
+    
+    // Get remaining recent blogs for grid
+    const remainingBlogs = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      _id: { $nin: [featuredBlog[0]?._id, ...recentBlogs.map(b => b._id)] }
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(8);
+    
+    return { 
+      success: true, 
+      featuredBlog: featuredBlog[0] ? JSON.parse(JSON.stringify(featuredBlog[0])) : null,
+      recentBlogs: JSON.parse(JSON.stringify(recentBlogs)),
+      remainingBlogs: JSON.parse(JSON.stringify(remainingBlogs))
+    };
+  } catch (error) {
+    console.error('Get latest blogs error:', error);
+    return { success: false, message: 'Failed to fetch blogs' };
+  }
+}
+
+/**
+ * Get related blogs by category
+ * @param {string} category - Blog category
+ * @param {string} currentBlogId - Current blog ID to exclude
+ * @param {number} limit - Number of blogs to fetch
+ * @returns {Array} Array of related blogs
+ */
+export async function getRelatedBlogs(category, currentBlogId, limit = 3) {
+  try {
+    await dbConnect();
+    const blogs = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      category: category,
+      _id: { $ne: currentBlogId }
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+    return { success: true, blogs: JSON.parse(JSON.stringify(blogs)) };
+  } catch (error) {
+    console.error('Get related blogs error:', error);
+    return { success: false, message: 'Failed to fetch related blogs' };
+  }
+}
+
+/**
+ * Get all categories
+ * @returns {Array} Array of unique categories
+ */
+export async function getAllCategories() {
+  try {
+    await dbConnect();
+    const categories = await Blog.distinct('category', { status: 'published', isActive: true });
+    return { success: true, categories };
+  } catch (error) {
+    console.error('Get categories error:', error);
+    return { success: false, message: 'Failed to fetch categories' };
+  }
+}
+
+/**
+ * Get related posts based on category and tags
+ * @param {string} currentPostId - Current blog ID to exclude
+ * @param {string} category - Current blog category
+ * @param {Array} tags - Current blog tags
+ * @returns {Array} Array of related blogs
+ */
+export async function getRelatedPosts(currentPostId, category, tags = []) {
+  try {
+    await dbConnect();
+    
+    // Find blogs where category matches OR any tags match, excluding current post
+    const relatedBlogs = await Blog.find({
+      _id: { $ne: currentPostId },
+      status: 'published',
+      isActive: true,
+      $or: [
+        { category: category },
+        { tags: { $in: tags } }
+      ]
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(4);
+    
+    return { success: true, blogs: JSON.parse(JSON.stringify(relatedBlogs)) };
+  } catch (error) {
+    console.error('Get related posts error:', error);
+    return { success: false, message: 'Failed to fetch related posts', blogs: [] };
+  }
+}
+
+/**
+ * Get blog statistics for dashboard
+ * @returns {Object} Statistics object
+ */
+export async function getBlogStats() {
+  try {
+    await dbConnect();
+    
+    // Get total blogs count
+    const totalBlogs = await Blog.countDocuments();
+    
+    // Get published blogs count
+    const publishedBlogs = await Blog.countDocuments({ status: 'published', isActive: true });
+    
+    // Get draft blogs count
+    const draftBlogs = await Blog.countDocuments({ status: 'draft' });
+    
+    // Get pending/scheduled blogs count
+    const scheduledBlogs = await Blog.countDocuments({ status: 'scheduled' });
+    
+    // Get blogs by category
+    const blogsByCategory = await Blog.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    return {
+      success: true,
+      stats: {
+        totalBlogs,
+        publishedBlogs,
+        draftBlogs,
+        scheduledBlogs,
+        activeBlogs: publishedBlogs,
+      },
+      categoryStats: blogsByCategory.map(cat => ({
+        category: cat._id || 'Uncategorized',
+        count: cat.count
+      }))
+    };
+  } catch (error) {
+    console.error('Get blog stats error:', error);
+    return { success: false, message: 'Failed to fetch blog stats' };
+  }
+}
+
