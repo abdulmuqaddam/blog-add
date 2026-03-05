@@ -43,3 +43,28 @@ body {
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* Shimmer Animation for Skeleton Loaders */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

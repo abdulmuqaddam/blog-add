@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, use, useRef } from 'react';
-import { getBlogById, updateBlog } from '@/lib/actions/blogActions';
+import { getBlogById, updateBlog, getAllCategoriesList } from '@/lib/actions/blogActions';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, X, Calendar, Loader2, ArrowLeft } from 'lucide-react';
+import { Upload, X, Calendar, Loader2, ArrowLeft, Tag, Plus } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
+import CategoryManager from '@/components/CategoryManager';
 
 export default function EditBlogPage(props) {
   const params = use(props.params);
@@ -15,36 +16,48 @@ export default function EditBlogPage(props) {
   const [imagePreview, setImagePreview] = useState(null);
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const editorRef = useRef(null);
 
   const [formData, setFormData] = useState({
     title: '',
     subHeading: '',
-    category: 'Technology',
+    category: '',
     content: '',
     featuredImage: '',
     status: 'draft',
     scheduledAt: '',
   });
 
-  const categories = [
-    'Technology',
-    'Business',
-    'Lifestyle',
-    'Health',
-    'Travel',
-    'Food',
-    'Education',
-    'Entertainment',
-    'Sports',
-    'Other',
-  ];
-
   useEffect(() => {
     if (params?.id) {
       fetchBlog(params.id);
+      fetchCategories();
     }
   }, [params?.id]);
+
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const result = await getAllCategoriesList();
+      if (result.success && result.categories.length > 0) {
+        setCategories(result.categories);
+        if (!formData.category) {
+          setFormData((prev) => ({ ...prev, category: result.categories[0].name }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const handleCategoryAdded = () => {
+    fetchCategories();
+  };
 
   const fetchBlog = async (id) => {
     try {
@@ -55,7 +68,7 @@ export default function EditBlogPage(props) {
         setFormData({
           title: blog.title || '',
           subHeading: blog.subHeading || '',
-          category: blog.category || 'Technology',
+          category: blog.category || '',
           content: blog.content || '',
           featuredImage: blog.featuredImage || '',
           status: blog.status || 'draft',
@@ -101,6 +114,7 @@ export default function EditBlogPage(props) {
     setFormData((prev) => ({ ...prev, featuredImage: '' }));
   };
 
+  // Tag handling
   const handleTagKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
@@ -126,7 +140,7 @@ export default function EditBlogPage(props) {
       const blogData = {
         ...formData,
         tags: tags,
-        content: editorRef.current ? editorRef.current.getContent() : formData.content,
+        content: editorRef.current?.getContent() || formData.content,
       };
 
       const result = await updateBlog(params.id, blogData);
@@ -168,6 +182,7 @@ export default function EditBlogPage(props) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Title */}
         <div>
           <label htmlFor="title" className="block text-sm font-semibold text-slate-700 mb-2">
             Blog Title *
@@ -184,9 +199,10 @@ export default function EditBlogPage(props) {
           />
         </div>
 
+        {/* Sub-Heading */}
         <div>
           <label htmlFor="subHeading" className="block text-sm font-semibold text-slate-700 mb-2">
-            Sub-Heading
+            Sub-Title
           </label>
           <input
             type="text"
@@ -199,11 +215,31 @@ export default function EditBlogPage(props) {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="category" className="block text-sm font-semibold text-slate-700 mb-2">
+        {/* Category */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label htmlFor="category" className="block text-sm font-semibold text-slate-700">
               Category *
             </label>
+            <button
+              type="button"
+              onClick={() => setCategoryManagerOpen(true)}
+              className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+            >
+              <Plus className="w-4 h-4" />
+              Manage Categories
+            </button>
+          </div>
+          {loadingCategories ? (
+            <div className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-50 flex items-center">
+              <Loader2 className="w-5 h-5 animate-spin text-slate-400 mr-2" />
+              <span className="text-slate-400">Loading categories...</span>
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl bg-slate-50 text-slate-500">
+              No categories available. Click "Manage Categories" to add one.
+            </div>
+          ) : (
             <select
               id="category"
               name="category"
@@ -213,48 +249,28 @@ export default function EditBlogPage(props) {
               required
             >
               {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+                <option key={cat._id} value={cat.name}>
+                  {cat.name}
                 </option>
               ))}
             </select>
-          </div>
-
-          <div>
-            <label htmlFor="tags" className="block text-sm font-semibold text-slate-700 mb-2">
-              Tags (SEO) - Press Enter to add
-            </label>
-            <div className="border-2 border-slate-200 rounded-xl focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100 transition-all p-2">
-              <div className="flex flex-wrap gap-2 mb-2">
-                {tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="hover:bg-indigo-200 rounded-full p-0.5"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <input
-                type="text"
-                id="tags"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                className="w-full px-2 py-1 focus:outline-none"
-                placeholder={tags.length === 0 ? "Type tag and press Enter..." : ""}
-              />
-            </div>
-          </div>
+          )}
         </div>
 
+        {/* Blog Content - Rich Text Editor */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-700 mb-2">
+            Blog Content *
+          </label>
+          <RichTextEditor
+            ref={editorRef}
+            value={formData.content}
+            onChange={handleContentChange}
+            placeholder="Write your blog content here..."
+          />
+        </div>
+
+        {/* Image Upload */}
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">
             Featured Image
@@ -291,18 +307,44 @@ export default function EditBlogPage(props) {
           </div>
         </div>
 
+        {/* Tags Input */}
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Blog Content *
+          <label htmlFor="tags" className="block text-sm font-semibold text-slate-700 mb-2">
+            Tags (SEO) - Press Enter to add
           </label>
-          <RichTextEditor
-            ref={editorRef}
-            value={formData.content}
-            onChange={handleContentChange}
-            placeholder="Write your blog content here..."
-          />
+          <div className="border-2 border-slate-200 rounded-xl focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100 transition-all p-2">
+            {/* Tags Display */}
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:bg-indigo-200 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            {/* Tag Input */}
+            <input
+              type="text"
+              id="tags"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleTagKeyDown}
+              className="w-full px-2 py-1 focus:outline-none"
+              placeholder={tags.length === 0 ? "Type tag and press Enter..." : ""}
+            />
+          </div>
         </div>
 
+        {/* Status & Schedule */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="status" className="block text-sm font-semibold text-slate-700 mb-2">
@@ -339,6 +381,7 @@ export default function EditBlogPage(props) {
           )}
         </div>
 
+        {/* Submit Button */}
         <div className="flex gap-4">
           <button
             type="submit"
@@ -363,6 +406,13 @@ export default function EditBlogPage(props) {
           </button>
         </div>
       </form>
+
+      {/* Category Manager Modal */}
+      <CategoryManager 
+        isOpen={categoryManagerOpen} 
+        onClose={() => setCategoryManagerOpen(false)}
+        onCategoryAdded={handleCategoryAdded}
+      />
     </div>
   );
 }

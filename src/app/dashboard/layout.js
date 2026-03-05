@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { getCurrentUser, logout } from '@/lib/actions/authActions';
 import Sidebar from '@/components/Sidebar';
+import { User as UserIcon } from 'lucide-react';
 
 export const metadata = {
   title: 'Dashboard',
@@ -21,14 +22,29 @@ export default async function DashboardLayout({ children }) {
       {/* Navbar */}
       <nav className="bg-gray-800 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Blog Dashboard</h1>
+          <Link href="/dashboard" className="text-xl font-bold hover:text-gray-300 transition-colors">
+            Blog Dashboard
+          </Link>
           <div className="flex gap-4 items-center">
-            <Link href="/dashboard/home" className="hover:text-gray-300">
+            <Link href="/dashboard/home" className="hover:text-gray-300 transition-colors">
               Home
             </Link>
             {user ? (
               <>
-                <span className="text-gray-300">Welcome, {user.name}</span>
+                <div className="flex items-center gap-2 ml-2">
+                  {user.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      alt={user.name} 
+                      className="w-8 h-8 rounded-full object-cover border-2 border-gray-600"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center">
+                      <UserIcon className="w-4 h-4" />
+                    </div>
+                  )}
+                  <span className="text-gray-300">{user.name}</span>
+                </div>
                 <form action={handleLogout}>
                   <button type="submit" className="hover:text-red-300 text-red-400 cursor-pointer transition-colors">
                     Logout
@@ -37,10 +53,10 @@ export default async function DashboardLayout({ children }) {
               </>
             ) : (
               <>
-                <Link href="/dashboard/login" className="hover:text-gray-300">
+                <Link href="/dashboard/login" className="hover:text-gray-300 transition-colors">
                   Login
                 </Link>
-                <Link href="/dashboard/signup" className="hover:text-gray-300">
+                <Link href="/dashboard/signup" className="hover:text-gray-300 transition-colors">
                   Signup
                 </Link>
               </>

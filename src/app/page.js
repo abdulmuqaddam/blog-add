@@ -1,7 +1,10 @@
-import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getLatestBlogs, getPublishedBlogs } from '@/lib/actions/blogActions';
+import { getLatestBlogs, getPublishedBlogs, getAllCategoriesList } from '@/lib/actions/blogActions';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import CategoryPills from '@/components/CategoryPills';
+import Newsletter from '@/components/Newsletter';
 
 // Date formatter function
 function formatDate(date) {
@@ -17,15 +20,17 @@ export default async function HomePage() {
   // Fetch latest blogs data
   const result = await getLatestBlogs();
   const blogsData = await getPublishedBlogs(20);
+  const categoriesResult = await getAllCategoriesList();
   
   const featuredBlog = result.success ? result.featuredBlog : null;
   const sidebarBlogs = result.success ? result.recentBlogs : [];
   // Combine sidebar blogs and remaining blogs for the grid (exclude the featured one)
   const allBlogsForGrid = blogsData.success ? blogsData.blogs.filter(b => b._id !== featuredBlog?._id) : [];
   const marqueeBlogs = blogsData.success ? blogsData.blogs : [];
+  const categories = categoriesResult.success ? categoriesResult.categories : [];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="bg-white">
       <Navbar />
       
       {/* News Marquee (Breaking News) */}
@@ -36,13 +41,13 @@ export default async function HomePage() {
               <span className="flex-shrink-0 px-3 py-1 bg-indigo-600 text-white text-sm font-semibold rounded-full">
                 Trending
               </span>
-              <div className="marquee-container flex-1 overflow-hidden">
+              <div className="marquee-container flex-1 overflow-hidden bg-indigo-600 rounded p-2">
                 <div className="marquee-content flex gap-8 animate-marquee">
                   {marqueeBlogs.map((blog) => (
                     <Link
                       key={blog._id}
                       href={`/blog/${blog.slug || blog._id}`}
-                      className="text-slate-600 hover:text-indigo-600 whitespace-nowrap text-sm font-medium"
+                      className="text-white whitespace-nowrap text-sm font-medium hover:text-indigo-200 transition-colors"
                     >
                       {blog.title}
                     </Link>
@@ -53,6 +58,13 @@ export default async function HomePage() {
           </div>
         </div>
       )}
+
+      {/* Category Pills - Horizontal Scrollable */}
+      <section className="bg-slate-50 border-b border-slate-100 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <CategoryPills categories={categories} />
+        </div>
+      </section>
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -113,14 +125,13 @@ export default async function HomePage() {
 
           {/* Sidebar - Next 4 Latest Blogs - 2 Columns */}
           <div className="lg:col-span-1">
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Latest Posts</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {sidebarBlogs.length > 0 ? (
                 sidebarBlogs.map((blog) => (
                   <Link
                     key={blog._id}
                     href={`/blog/${blog.slug || blog._id}`}
-                    className="group bg-white rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 border border-slate-100"
+                    className="group bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl hover:scale-105 transition-all duration-300"
                   >
                     <div className="relative aspect-[4/3] overflow-hidden">
                       {blog.featuredImage ? (
@@ -154,12 +165,12 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Recent Posts Grid Section - 2 Columns */}
+      {/* Recent Posts Grid Section - 2 Columns with Enhanced Animation */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Recent Posts</h2>
           <Link
-            href="/categories"
+            href="/blog/view-all"
             className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors"
           >
             View All →
@@ -167,12 +178,12 @@ export default async function HomePage() {
         </div>
 
         {allBlogsForGrid.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {allBlogsForGrid.slice(0, 12).map((blog) => (
               <Link
                 key={blog._id}
                 href={`/blog/${blog.slug || blog._id}`}
-                className="group bg-white rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-slate-100"
+                className="group bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-2xl hover:scale-105 transition-all duration-300"
               >
                 <div className="relative aspect-[4/3] overflow-hidden">
                   {blog.featuredImage ? (
@@ -220,42 +231,11 @@ export default async function HomePage() {
         )}
       </section>
 
+      {/* Newsletter Subscription Section */}
+      <Newsletter />
+
       {/* Footer */}
-      <footer className="bg-slate-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">B</span>
-                </div>
-                <span className="font-bold text-xl">Blogify</span>
-              </div>
-              <p className="text-slate-400">
-                Your source for the latest insights, stories, and expertise.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><Link href="/" className="hover:text-indigo-400">Home</Link></li>
-                <li><Link href="/categories" className="hover:text-indigo-400">Categories</Link></li>
-                <li><Link href="/about" className="hover:text-indigo-400">About</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Connect</h4>
-              <ul className="space-y-2 text-slate-400">
-                <li><Link href="/login" className="hover:text-indigo-400">Login</Link></li>
-                <li><Link href="/dashboard" className="hover:text-indigo-400">Dashboard</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400">
-            <p>© {new Date().getFullYear()} Blogify. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

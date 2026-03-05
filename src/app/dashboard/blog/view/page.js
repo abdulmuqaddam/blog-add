@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react';
 import { getAllBlogsForAdmin, deleteBlog, toggleBlogStatus } from '@/lib/actions/blogActions';
 import Link from 'next/link';
-import { Edit, Trash2, Eye, Calendar, Clock } from 'lucide-react';
+import { Edit, Trash2, Eye, Calendar, Clock, Tag } from 'lucide-react';
+import CategoryManager from '@/components/CategoryManager';
 
 export default function ViewBlogsPage() {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
 
   useEffect(() => {
     fetchBlogs();
@@ -147,12 +149,21 @@ export default function ViewBlogsPage() {
           <h1 className="text-3xl font-bold text-slate-900">All Blogs</h1>
           <p className="text-slate-500 mt-2">Manage your blog posts</p>
         </div>
-        <Link
-          href="/dashboard/blog/add"
-          className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all"
-        >
-          Add New Blog
-        </Link>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setCategoryManagerOpen(true)}
+            className="px-4 py-3 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200 transition-all flex items-center gap-2"
+          >
+            <Tag className="w-5 h-5" />
+            Manage Categories
+          </button>
+          <Link
+            href="/dashboard/blog/add"
+            className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-all"
+          >
+            Add New Blog
+          </Link>
+        </div>
       </div>
 
       {blogs.length === 0 ? (
@@ -273,6 +284,12 @@ export default function ViewBlogsPage() {
           ))}
         </div>
       )}
+
+      {/* Category Manager Modal */}
+      <CategoryManager 
+        isOpen={categoryManagerOpen} 
+        onClose={() => setCategoryManagerOpen(false)}
+      />
     </div>
   );
 }

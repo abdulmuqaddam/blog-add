@@ -175,6 +175,7 @@ export async function getCurrentUser() {
       name: user.name,
       email: user.email,
       role: user.role,
+      avatar: user.avatar || null,
     };
   } catch (error) {
     console.error('Get current user error:', error);

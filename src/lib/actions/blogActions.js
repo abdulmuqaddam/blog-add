@@ -3,6 +3,7 @@
 // Server Actions for Blog Management
 import dbConnect from '../db';
 import Blog from '../models/Blog';
+import Category from '../models/Category';
 import { cookies } from 'next/headers';
 import { verifyToken } from '../auth';
 
@@ -69,8 +70,7 @@ export async function getBlogBySlug(slug) {
       return { success: false, message: 'Blog not found' };
     }
     
-    // Increment views
-    await Blog.findByIdAndUpdate(blog._id, { $inc: { views: 1 } });
+    // Note: Views are incremented on the client side via ViewCounter component
     
     return { success: true, blog: JSON.parse(JSON.stringify(blog)) };
   } catch (error) {
@@ -263,6 +263,10 @@ export async function toggleBlogStatus(blogId) {
 export async function getPublishedBlogs(limit = 10) {
   try {
     await dbConnect();
+    
+    // Process any scheduled blogs that have passed their scheduled time
+    await processScheduledBlogs();
+    
     const blogs = await Blog.find({ status: 'published', isActive: true })
       .populate('author', 'name email')
       .sort({ createdAt: -1 })
@@ -281,6 +285,9 @@ export async function getPublishedBlogs(limit = 10) {
 export async function getLatestBlogs() {
   try {
     await dbConnect();
+    
+    // Process any scheduled blogs that have passed their scheduled time
+    await processScheduledBlogs();
     
     // Get the latest published blog (featured)
     const featuredBlog = await Blog.find({ status: 'published', isActive: true })
@@ -436,6 +443,224 @@ export async function getBlogStats() {
   } catch (error) {
     console.error('Get blog stats error:', error);
     return { success: false, message: 'Failed to fetch blog stats' };
+  }
+}
+
+// ============ VIEW MANAGEMENT FUNCTIONS ============
+
+/**
+ * Increment view count for a blog post
+ * @param {string} blogId - Blog ID
+ * @returns {Object} Result object
+ */
+export async function incrementViews(blogId) {
+  try {
+    await dbConnect();
+    
+    const updatedBlog = await Blog.findByIdAndUpdate(
+      blogId,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
+    
+    if (!updatedBlog) {
+      return { success: false, message: 'Blog not found' };
+    }
+    
+    return { success: true, views: updatedBlog.views };
+  } catch (error) {
+    console.error('Increment views error:', error);
+    return { success: false, message: 'Failed to increment views' };
+  }
+}
+
+// ============ CATEGORY MANAGEMENT FUNCTIONS ============
+
+/**
+ * Process scheduled blogs - publish blogs whose scheduled time has passed
+ */
+async function processScheduledBlogs() {
+  try {
+    await dbConnect();
+    const now = new Date();
+    
+    // Find and update scheduled blogs that have passed their scheduled time
+    await Blog.updateMany(
+      { 
+        status: 'scheduled', 
+        scheduledAt: { $lte: now }
+      },
+      { 
+        status: 'published',
+        publishedAt: now
+      }
+    );
+  } catch (error) {
+    console.error('Process scheduled blogs error:', error);
+  }
+}
+
+/**
+ * Get all categories from Category collection
+ * @returns {Array} Array of categories
+ */
+export async function getAllCategoriesList() {
+  try {
+    await dbConnect();
+    const categories = await Category.find({ isActive: true }).sort({ name: 1 });
+    return { success: true, categories: JSON.parse(JSON.stringify(categories)) };
+  } catch (error) {
+    console.error('Get all categories error:', error);
+    return { success: false, message: 'Failed to fetch categories', categories: [] };
+  }
+}
+
+/**
+ * Create a new category
+ * @param {string} name - Category name
+ * @param {string} description - Category description (optional)
+ * @returns {Object} Result object
+ */
+export async function createCategory(name, description = '') {
+  try {
+    await dbConnect();
+    
+    // Check if category already exists
+    const existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    if (existingCategory) {
+      return { success: false, message: 'Category already exists' };
+    }
+    
+    // Generate slug
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    
+    const category = await Category.create({
+      name,
+      slug,
+      description,
+    });
+    
+    return { success: true, message: 'Category created successfully', category: JSON.parse(JSON.stringify(category)) };
+  } catch (error) {
+    console.error('Create category error:', error);
+    return { success: false, message: 'Failed to create category' };
+  }
+}
+
+/**
+ * Delete a category
+ * @param {string} categoryId - Category ID
+ * @returns {Object} Result object
+ */
+export async function deleteCategory(categoryId) {
+  try {
+    await dbConnect();
+    
+    const category = await Category.findById(categoryId);
+    
+    if (!category) {
+      return { success: false, message: 'Category not found' };
+    }
+    
+    await Category.findByIdAndDelete(categoryId);
+    
+    return { success: true, message: 'Category deleted successfully' };
+  } catch (error) {
+    console.error('Delete category error:', error);
+    return { success: false, message: 'Failed to delete category' };
+  }
+}
+
+/**
+ * Get blogs by tag
+ * @param {string} tag - Tag name
+ * @returns {Array} Array of blogs with the specified tag
+ */
+export async function getBlogsByTag(tag) {
+  try {
+    await dbConnect();
+    
+    const blogs = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      tags: { $in: [tag] }
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 });
+    
+    return { success: true, blogs: JSON.parse(JSON.stringify(blogs)) };
+  } catch (error) {
+    console.error('Get blogs by tag error:', error);
+    return { success: false, message: 'Failed to fetch blogs by tag', blogs: [] };
+  }
+}
+
+/**
+ * Get adjacent posts (next and previous)
+ * @param {string} currentBlogId - Current blog ID
+ * @param {string} category - Current blog category
+ * @returns {Object} Object with next and previous posts
+ */
+export async function getAdjacentPosts(currentBlogId, category) {
+  try {
+    await dbConnect();
+    
+    // Get all published blogs in the same category, sorted by date
+    const blogs = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      _id: { $ne: currentBlogId },
+      category: category
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(10);
+    
+    const blogsArray = JSON.parse(JSON.stringify(blogs));
+    
+    // Find current blog position
+    const allBlogsInCategory = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      category: category
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 });
+    
+    const allBlogsArray = JSON.parse(JSON.stringify(allBlogsInCategory));
+    const currentIndex = allBlogsArray.findIndex(b => b._id === currentBlogId);
+    
+    const previousPost = currentIndex > 0 ? allBlogsArray[currentIndex - 1] : null;
+    const nextPost = currentIndex < allBlogsArray.length - 1 ? allBlogsArray[currentIndex + 1] : null;
+    
+    // If no adjacent posts in same category, get from all posts
+    if (!previousPost || !nextPost) {
+      const allPosts = await Blog.find({ 
+        status: 'published', 
+        isActive: true,
+        _id: { $ne: currentBlogId }
+      })
+        .populate('author', 'name email')
+        .sort({ createdAt: -1 });
+      
+      const allPostsArray = JSON.parse(JSON.stringify(allPosts));
+      const currentPostIndex = allPostsArray.findIndex(b => b._id === currentBlogId);
+      
+      return {
+        success: true,
+        previous: previousPost || (currentPostIndex > 0 ? allPostsArray[currentPostIndex - 1] : null),
+        next: nextPost || (currentPostIndex < allPostsArray.length - 1 ? allPostsArray[currentPostIndex + 1] : null)
+      };
+    }
+    
+    return {
+      success: true,
+      previous: previousPost,
+      next: nextPost
+    };
+  } catch (error) {
+    console.error('Get adjacent posts error:', error);
+    return { success: false, message: 'Failed to fetch adjacent posts', previous: null, next: null };
   }
 }
 

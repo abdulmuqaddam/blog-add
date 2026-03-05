@@ -22,9 +22,19 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false,
   },
+  contact: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  address: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   role: {
     type: String,
-    enum: ['superadmin', 'admin', 'user'],
+    enum: ['superadmin', 'admin', 'editor', 'user'],
     default: 'user',
   },
   avatar: {
