@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { exportToExcel, exportToCSV } from '@/lib/exportUtils';
-import { sendNewsletter } from '@/lib/actions/subscriberActions';
+import { sendNewsletter, sendEmailToSubscriber } from '@/lib/actions/subscriberActions';
 import { Mail, Users, Calendar, FileSpreadsheet, FileText, Send, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 export default function SubscribersTable({ initialSubscribers }) {
   const [subscribers] = useState(initialSubscribers);
   const [showModal, setShowModal] = useState(false);
+  const [showSingleModal, setShowSingleModal] = useState(false);
+  const [selectedSubscriber, setSelectedSubscriber] = useState(null);
   const [emailData, setEmailData] = useState({ subject: '', content: '' });
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
@@ -33,6 +35,32 @@ export default function SubscribersTable({ initialSubscribers }) {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleSendSingleEmail = async (e) => {
+    e.preventDefault();
+    setSending(true);
+    setResult(null);
+
+    try {
+      const res = await sendEmailToSubscriber({
+        email: selectedSubscriber.email,
+        subject: emailData.subject,
+        content: emailData.content
+      });
+      setResult(res);
+    } catch (error) {
+      setResult({ success: false, message: 'Failed to send email' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const openSingleSendModal = (subscriber) => {
+    setSelectedSubscriber(subscriber);
+    setShowSingleModal(true);
+    setResult(null);
+    setEmailData({ subject: '', content: '' });
   };
 
   const formatDate = (date) => {
@@ -162,6 +190,100 @@ export default function SubscribersTable({ initialSubscribers }) {
         </div>
       )}
 
+      {/* Send Single Email Modal */}
+      {showSingleModal && selectedSubscriber && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Send Email</h3>
+                <p className="text-sm text-gray-500 mt-1">To: {selectedSubscriber.email}</p>
+              </div>
+              <button
+                onClick={() => { setShowSingleModal(false); setResult(null); setEmailData({ subject: '', content: '' }); setSelectedSubscriber(null); }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {result ? (
+              <div className={`p-4 rounded-xl ${result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                <div className="flex items-center gap-3">
+                  {result.success ? (
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-red-600" />
+                  )}
+                  <p className={result.success ? 'text-green-700' : 'text-red-700'}>{result.message}</p>
+                </div>
+                <button
+                  onClick={() => { setShowSingleModal(false); setResult(null); setEmailData({ subject: '', content: '' }); setSelectedSubscriber(null); }}
+                  className="mt-4 w-full py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSendSingleEmail}>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    value={emailData.subject}
+                    onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
+                    placeholder="Enter email subject"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Content
+                  </label>
+                  <textarea
+                    value={emailData.content}
+                    onChange={(e) => setEmailData({ ...emailData, content: e.target.value })}
+                    placeholder="Write your message here..."
+                    rows={6}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    required
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setShowSingleModal(false); setResult(null); setEmailData({ subject: '', content: '' }); setSelectedSubscriber(null); }}
+                    className="flex-1 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={sending}
+                    className="flex-1 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5" />
+                        Send Email
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Subscribers Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-6 border-b border-gray-200">
@@ -181,6 +303,9 @@ export default function SubscribersTable({ initialSubscribers }) {
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Date Joined
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -211,6 +336,17 @@ export default function SubscribersTable({ initialSubscribers }) {
                         <Calendar className="w-4 h-4" />
                         {formatDate(subscriber.createdAt)}
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {subscriber.status === 'active' && (
+                        <button
+                          onClick={() => openSingleSendModal(subscriber)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Send className="w-4 h-4" />
+                          Send
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

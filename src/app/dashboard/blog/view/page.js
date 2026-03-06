@@ -189,7 +189,7 @@ export default function ViewBlogsPage() {
                   {blog.featuredImage ? (
                     <img
                       src={blog.featuredImage}
-                      alt={blog.title}
+                      alt={blog.featuredImageAlt || blog.title}
                       className="w-full h-full object-cover"
                     />
                   ) : (

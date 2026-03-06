@@ -36,6 +36,12 @@ const blogSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  featuredImageAlt: {
+    type: String,
+    default: '',
+    trim: true,
+    maxlength: [200, 'Alt text cannot exceed 200 characters'],
+  },
   tags: [{
     type: String,
     trim: true,

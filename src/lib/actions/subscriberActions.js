@@ -3,7 +3,7 @@
 // Server Actions for Subscriber Management
 import dbConnect from '../db';
 import Subscriber from '../models/Subscriber';
-import { sendBulkEmails } from '../email';
+import { sendBulkEmails, sendSingleEmail } from '../email';
 
 /**
  * Subscribe a new user to the newsletter
@@ -177,6 +177,78 @@ export async function sendNewsletter(data) {
   } catch (error) {
     console.error('Send newsletter error:', error);
     return { success: false, message: 'Failed to send newsletter. Please try again.' };
+  }
+}
+
+/**
+ * Send email to a single subscriber
+ * @param {Object} data - Email data with email, subject and content
+ * @returns {Object} Result object
+ */
+export async function sendEmailToSubscriber(data) {
+  try {
+    await dbConnect();
+
+    const { email, subject, content } = data;
+
+    if (!email || !subject || !content) {
+      return { success: false, message: 'Email, subject and content are required.' };
+    }
+
+    // Check if subscriber exists
+    const subscriber = await Subscriber.findOne({ 
+      email: email.toLowerCase().trim() 
+    });
+
+    if (!subscriber) {
+      return { success: false, message: 'Subscriber not found.' };
+    }
+
+    // Prepare email HTML
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📧 Message</h1>
+            </div>
+            <div class="content">
+              ${content}
+            </div>
+            <div class="footer">
+              <p>You're receiving this because you're subscribed to our newsletter.</p>
+              <p>© ${new Date().getFullYear()} Blogify. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Send single email
+    const result = await sendSingleEmail({
+      to: email,
+      subject,
+      html
+    });
+
+    if (result.success) {
+      return { success: true, message: `Email sent successfully to ${email}.` };
+    } else {
+      return { success: false, message: `Failed to send email: ${result.error}` };
+    }
+  } catch (error) {
+    console.error('Send single email error:', error);
+    return { success: false, message: 'Failed to send email. Please try again.' };
   }
 }
 

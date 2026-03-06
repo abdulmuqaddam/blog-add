@@ -77,7 +77,7 @@ export default async function HomePage() {
                   {featuredBlog.featuredImage ? (
                     <Image
                       src={featuredBlog.featuredImage}
-                      alt={featuredBlog.title}
+                      alt={featuredBlog.featuredImageAlt || featuredBlog.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                       priority
@@ -137,7 +137,7 @@ export default async function HomePage() {
                       {blog.featuredImage ? (
                         <Image
                           src={blog.featuredImage}
-                          alt={blog.title}
+                          alt={blog.featuredImageAlt || blog.title}
                           fill
                           className="object-cover group-hover:scale-110 transition-transform duration-500"
                         />
@@ -189,7 +189,7 @@ export default async function HomePage() {
                   {blog.featuredImage ? (
                     <Image
                       src={blog.featuredImage}
-                      alt={blog.title}
+                      alt={blog.featuredImageAlt || blog.title}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-500"
                     />

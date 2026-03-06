@@ -4,9 +4,10 @@ import { useState, useEffect, use, useRef } from 'react';
 import { getBlogById, updateBlog, getAllCategoriesList } from '@/lib/actions/blogActions';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, X, Calendar, Loader2, ArrowLeft, Tag, Plus } from 'lucide-react';
+import { Upload, X, Calendar, Loader2, ArrowLeft, Tag, Plus, Image as ImageIcon } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import CategoryManager from '@/components/CategoryManager';
+import MediaGalleryModal from '@/components/MediaGalleryModal';
 
 export default function EditBlogPage(props) {
   const params = use(props.params);
@@ -14,6 +15,7 @@ export default function EditBlogPage(props) {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [imagePreview, setImagePreview] = useState(null);
+  const [mediaGalleryOpen, setMediaGalleryOpen] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -27,6 +29,7 @@ export default function EditBlogPage(props) {
     category: '',
     content: '',
     featuredImage: '',
+    featuredImageAlt: '',
     status: 'draft',
     scheduledAt: '',
   });
@@ -71,6 +74,7 @@ export default function EditBlogPage(props) {
           category: blog.category || '',
           content: blog.content || '',
           featuredImage: blog.featuredImage || '',
+          featuredImageAlt: blog.featuredImageAlt || '',
           status: blog.status || 'draft',
           scheduledAt: blog.scheduledAt ? new Date(blog.scheduledAt).toISOString().slice(0, 16) : '',
         });
@@ -112,6 +116,15 @@ export default function EditBlogPage(props) {
   const removeImage = () => {
     setImagePreview(null);
     setFormData((prev) => ({ ...prev, featuredImage: '' }));
+  };
+
+  const handleSelectFromGallery = (mediaItem) => {
+    setImagePreview(mediaItem.url);
+    setFormData((prev) => ({ 
+      ...prev, 
+      featuredImage: mediaItem.url,
+      featuredImageAlt: mediaItem.altText || ''
+    }));
   };
 
   // Tag handling
@@ -224,7 +237,7 @@ export default function EditBlogPage(props) {
             <button
               type="button"
               onClick={() => setCategoryManagerOpen(true)}
-              className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
             >
               <Plus className="w-4 h-4" />
               Manage Categories
@@ -272,9 +285,19 @@ export default function EditBlogPage(props) {
 
         {/* Image Upload */}
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-2">
-            Featured Image
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              Featured Image
+            </label>
+            <button
+              type="button"
+              onClick={() => setMediaGalleryOpen(true)}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-medium rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg cursor-pointer"
+            >
+              <ImageIcon className="w-4 h-4" />
+              Select from Gallery
+            </button>
+          </div>
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-indigo-500 transition-colors">
             {imagePreview ? (
               <div className="relative inline-block">
@@ -304,6 +327,23 @@ export default function EditBlogPage(props) {
                 />
               </label>
             )}
+          </div>
+          
+          {/* Featured Image Alt Text */}
+          <div className="mt-4">
+            <label htmlFor="featuredImageAlt" className="block text-sm font-semibold text-slate-700 mb-2">
+              Featured Image Alt Text (SEO)
+            </label>
+            <input
+              type="text"
+              id="featuredImageAlt"
+              name="featuredImageAlt"
+              value={formData.featuredImageAlt}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all"
+              placeholder="Describe the image for accessibility and SEO"
+            />
+            <p className="text-xs text-slate-500 mt-1">This alt text will be displayed when the image cannot be loaded and improves SEO</p>
           </div>
         </div>
 
@@ -412,6 +452,13 @@ export default function EditBlogPage(props) {
         isOpen={categoryManagerOpen} 
         onClose={() => setCategoryManagerOpen(false)}
         onCategoryAdded={handleCategoryAdded}
+      />
+
+      {/* Media Gallery Modal */}
+      <MediaGalleryModal
+        isOpen={mediaGalleryOpen}
+        onClose={() => setMediaGalleryOpen(false)}
+        onSelect={handleSelectFromGallery}
       />
     </div>
   );

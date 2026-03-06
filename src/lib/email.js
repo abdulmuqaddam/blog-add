@@ -129,5 +129,74 @@ export async function sendBulkEmails({ recipients, subject, html, text, onProgre
 // Export for use in subscriberActions
 export { SMTP_CONFIG, isSMTPConfigured };
 
-export default { sendBulkEmails, SMTP_CONFIG, isSMTPConfigured };
+/**
+ * Send email to a single recipient
+ */
+export async function sendSingleEmail({ to, subject, html, text }) {
+  const result = {
+    success: false,
+    error: null
+  };
+
+  console.log(`\n📧 Sending single email...`);
+  console.log(`   To: ${to}`);
+  console.log(`   Subject: ${subject}`);
+
+  const smtpReady = isSMTPConfigured();
+
+  if (!smtpReady) {
+    // Simulation mode
+    console.log('   Mode: Simulation (SMTP not configured)');
+    result.success = true;
+    return result;
+  }
+
+  console.log('   Mode: Real SMTP');
+
+  let transporter;
+  try {
+    transporter = nodemailer.createTransport({
+      host: SMTP_CONFIG.host,
+      port: SMTP_CONFIG.port,
+      secure: SMTP_CONFIG.secure,
+      auth: {
+        user: SMTP_CONFIG.user,
+        pass: SMTP_CONFIG.pass,
+      },
+    });
+  } catch (err) {
+    console.error('   Transporter creation FAILED:', err.message);
+    result.error = 'Transporter error: ' + err.message;
+    return result;
+  }
+
+  // Verify connection
+  try {
+    await transporter.verify();
+  } catch (err) {
+    console.error('   Connection verification FAILED:', err.message);
+    result.error = 'Connection failed: ' + err.message;
+    return result;
+  }
+
+  // Send email
+  try {
+    const info = await transporter.sendMail({
+      from: SMTP_CONFIG.from,
+      to,
+      subject,
+      html,
+      text: text || html.replace(/<[^>]*>/g, ''),
+    });
+    console.log(`   ✅ Email sent - Message ID: ${info.messageId.substring(0, 20)}...`);
+    result.success = true;
+  } catch (err) {
+    console.error(`   ❌ Failed: ${err.message}`);
+    result.error = err.message;
+  }
+
+  return result;
+}
+
+export default { sendBulkEmails, sendSingleEmail, SMTP_CONFIG, isSMTPConfigured };
 

@@ -75,7 +75,7 @@ export default async function ViewAllPage() {
                         {blog.featuredImage ? (
                           <Image
                             src={blog.featuredImage}
-                            alt={blog.title}
+                            alt={blog.featuredImageAlt || blog.title}
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-500"
                           />

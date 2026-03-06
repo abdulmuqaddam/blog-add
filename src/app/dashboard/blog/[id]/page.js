@@ -179,7 +179,7 @@ export default function BlogDetailsPage(props) {
         <div className="mb-8">
           <img
             src={blog.featuredImage}
-            alt={blog.title}
+            alt={blog.featuredImageAlt || blog.title}
             className="w-full h-[400px] object-cover rounded-xl"
           />
         </div>

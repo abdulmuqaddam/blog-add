@@ -2,13 +2,18 @@
 
 import { useState } from 'react';
 import { subscribeUser } from '@/lib/actions/subscriberActions';
-import { Mail, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, Loader2, CheckCircle, AlertCircle, X } from 'lucide-react';
 
 export default function SubscribeForm() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState(null); // 'success' or 'error'
+
+  const dismissMessage = () => {
+    setMessage(null);
+    setMessageType(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -91,9 +96,19 @@ export default function SubscribeForm() {
           <div 
             className="mt-4 p-4 bg-green-500/20 border border-green-400/30 rounded-xl animate-fade-in"
           >
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-              <p className="text-green-100 text-sm">{message}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                <p className="text-green-100 text-sm">{message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={dismissMessage}
+                className="p-1 hover:bg-green-500/30 rounded-full transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="w-4 h-4 text-green-400" />
+              </button>
             </div>
           </div>
         )}

@@ -2,13 +2,17 @@
 
 import { useState } from 'react';
 import { subscribeUser } from '@/lib/actions/subscriberActions';
-import { Mail, ArrowRight, Loader2, Check, AlertCircle } from 'lucide-react';
+import { Mail, ArrowRight, Loader2, Check, AlertCircle, X } from 'lucide-react';
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [error, setError] = useState('');
+
+  const dismissSuccess = () => {
+    setSubscribed(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,6 +81,14 @@ export default function Newsletter() {
               <span className="text-white font-medium">
                 Thanks for subscribing to our newsletter!
               </span>
+              <button
+                type="button"
+                onClick={dismissSuccess}
+                className="ml-2 p-1 hover:bg-green-500/30 rounded-full transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
             </div>
           ) : (
             /* Form */

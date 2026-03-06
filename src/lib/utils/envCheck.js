@@ -13,6 +13,12 @@ const REQUIRED_ENV_VARS = {
   JWT: [
     'JWT_SECRET'
   ],
+  // Cloudinary (Image Upload)
+  CLOUDINARY: [
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET'
+  ],
   // Email/SMTP
   SMTP: [
     'SMTP_USER',
@@ -80,6 +86,13 @@ function getMissingVars() {
     }
   });
   
+  // Check Cloudinary variables
+  REQUIRED_ENV_VARS.CLOUDINARY.forEach(variable => {
+    if (!process.env[variable]) {
+      missing.push({ category: 'Cloudinary (Image Upload)', variable });
+    }
+  });
+  
   // Check SMTP variables (warning only, not blocking)
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     missing.push({ category: 'Email (SMTP)', variable: 'SMTP_USER/SMTP_PASS' });
@@ -101,6 +114,12 @@ export function getEnvStatus() {
     jwt: {
       configured: !!process.env.JWT_SECRET,
       value: process.env.JWT_SECRET ? '✓ Configured' : 'Not set'
+    },
+    cloudinary: {
+      configured: !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET),
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'Not set',
+      apiKey: process.env.CLOUDINARY_API_KEY ? '✓ Configured' : 'Not set',
+      apiSecret: process.env.CLOUDINARY_API_SECRET ? '✓ Configured' : 'Not set'
     },
     smtp: {
       configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS),

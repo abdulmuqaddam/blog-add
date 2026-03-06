@@ -172,7 +172,7 @@ export default async function BlogDetailsPage({ params }) {
                 <div className="relative aspect-[16/9] rounded-2xl overflow-hidden mb-8">
                   <Image
                     src={blog.featuredImage}
-                    alt={blog.title}
+                    alt={blog.featuredImageAlt || blog.title}
                     fill
                     className="object-cover"
                     priority
@@ -216,7 +216,7 @@ export default async function BlogDetailsPage({ params }) {
                             {relatedBlog.featuredImage ? (
                               <Image
                                 src={relatedBlog.featuredImage}
-                                alt={relatedBlog.title}
+                                alt={relatedBlog.featuredImageAlt || relatedBlog.title}
                                 fill
                                 className="object-cover group-hover:scale-105 transition-transform duration-300"
                               />
@@ -275,7 +275,7 @@ export default async function BlogDetailsPage({ params }) {
                       <div className="relative w-24 h-24 rounded-lg overflow-hidden">
                         <Image
                           src={previousPost.featuredImage}
-                          alt={previousPost.title}
+                          alt={previousPost.featuredImageAlt || previousPost.title}
                           fill
                           className="object-cover"
                         />
@@ -309,7 +309,7 @@ export default async function BlogDetailsPage({ params }) {
                       <div className="relative w-24 h-24 rounded-lg overflow-hidden">
                         <Image
                           src={nextPost.featuredImage}
-                          alt={nextPost.title}
+                          alt={nextPost.featuredImageAlt || nextPost.title}
                           fill
                           className="object-cover"
                         />
