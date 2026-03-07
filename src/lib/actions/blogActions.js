@@ -3,6 +3,7 @@
 // Server Actions for Blog Management
 import dbConnect from '../db';
 import Blog from '../models/Blog';
+import User from '../models/User';
 import Category from '../models/Category';
 import { cookies } from 'next/headers';
 import { verifyToken } from '../auth';
@@ -80,6 +81,31 @@ export async function getBlogBySlug(slug) {
 }
 
 /**
+ * Generate a unique slug from title
+ * @param {string} title - Blog title
+ * @param {Object} Blog - Blog model
+ * @returns {string} Unique slug
+ */
+async function generateUniqueSlug(title, Blog) {
+  // Create base slug from title
+  const baseSlug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  
+  // Check if base slug exists
+  const existingBlog = await Blog.findOne({ slug: baseSlug });
+  
+  if (!existingBlog) {
+    return baseSlug;
+  }
+  
+  // If exists, add a random suffix
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  return `${baseSlug}-${randomSuffix}`;
+}
+
+/**
  * Create new blog post
  * @param {Object} blogData - Blog data
  * @returns {Object} Result object
@@ -101,11 +127,8 @@ export async function createBlog(blogData) {
     
     await dbConnect();
     
-    // Generate slug from title
-    const slug = blogData.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') + '-' + Date.now();
+    // Generate unique slug from title
+    const slug = await generateUniqueSlug(blogData.title, Blog);
     
     const blog = await Blog.create({
       ...blogData,
@@ -661,6 +684,63 @@ export async function getAdjacentPosts(currentBlogId, category) {
   } catch (error) {
     console.error('Get adjacent posts error:', error);
     return { success: false, message: 'Failed to fetch adjacent posts', previous: null, next: null };
+  }
+}
+
+/**
+ * Get travel blogs for BBC Travel style section
+ * @param {number} limit - Number of blogs to fetch (default 9)
+ * @returns {Object} Object with travel blogs array
+ */
+export async function getTravelBlogs(limit = 9) {
+  try {
+    await dbConnect();
+    
+    // Process any scheduled blogs that have passed their scheduled time
+    await processScheduledBlogs();
+    
+    const blogs = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      category: 'Travel'
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+    
+    return { success: true, blogs: JSON.parse(JSON.stringify(blogs)) };
+  } catch (error) {
+    console.error('Get travel blogs error:', error);
+    return { success: false, message: 'Failed to fetch travel blogs', blogs: [] };
+  }
+}
+
+/**
+ * Get blogs by category
+ * @param {string} category - Category name to filter by
+ * @param {number} limit - Number of blogs to fetch (default 6)
+ * @returns {Object} Object with blogs array
+ */
+export async function getBlogsByCategory(category, limit = 6) {
+  try {
+    await dbConnect();
+    
+    // Process any scheduled blogs that have passed their scheduled time
+    await processScheduledBlogs();
+    
+    const blogs = await Blog.find({ 
+      status: 'published', 
+      isActive: true,
+      category: category
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+    
+    return { success: true, blogs: JSON.parse(JSON.stringify(blogs)) };
+  } catch (error) {
+    console.error('Get blogs by category error:', error);
+    return { success: false, message: `Failed to fetch ${category} blogs`, blogs: [] };
   }
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   MessageCircle, 
@@ -13,8 +13,13 @@ import {
 
 export default function SocialShare({ title, url }) {
   const [copied, setCopied] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
 
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : url || '';
+  // Use useEffect to avoid hydration mismatch
+  useEffect(() => {
+    setShareUrl(url || (typeof window !== 'undefined' ? window.location.href : ''));
+  }, [url]);
+
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title || 'Check out this blog post');
 
@@ -34,6 +39,8 @@ export default function SocialShare({ title, url }) {
       console.error('Failed to copy:', err);
     }
   };
+
+  if (!shareUrl) return null;
 
   return (
     <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden lg:block">

@@ -27,6 +27,7 @@ export default function AddBlogPage() {
     content: '',
     featuredImage: '',
     featuredImageAlt: '',
+    featuredImageCaption: '',
     status: 'draft',
     scheduledAt: '',
   });
@@ -86,7 +87,8 @@ export default function AddBlogPage() {
     setFormData((prev) => ({ 
       ...prev, 
       featuredImage: mediaItem.url,
-      featuredImageAlt: mediaItem.altText || ''
+      featuredImageAlt: mediaItem.altText || '',
+      featuredImageCaption: mediaItem.caption || ''
     }));
   };
 
@@ -292,6 +294,23 @@ export default function AddBlogPage() {
               placeholder="Describe the image for accessibility and SEO"
             />
             <p className="text-xs text-slate-500 mt-1">This alt text will be displayed when the image cannot be loaded and improves SEO</p>
+          </div>
+
+          {/* Featured Image Caption */}
+          <div className="mt-4">
+            <label htmlFor="featuredImageCaption" className="block text-sm font-semibold text-slate-700 mb-2">
+              Featured Image Caption
+            </label>
+            <input
+              type="text"
+              id="featuredImageCaption"
+              name="featuredImageCaption"
+              value={formData.featuredImageCaption}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all"
+              placeholder="Add a caption to display below the image"
+            />
+            <p className="text-xs text-slate-500 mt-1">Optional - displayed below the featured image on the blog</p>
           </div>
         </div>
 

@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getLatestBlogs, getPublishedBlogs, getAllCategoriesList } from '@/lib/actions/blogActions';
+import { Suspense } from 'react';
+import { getLatestBlogs, getPublishedBlogs, getAllCategoriesList, getTravelBlogs, getBlogsByCategory } from '@/lib/actions/blogActions';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CategoryPills from '@/components/CategoryPills';
-import Newsletter from '@/components/Newsletter';
+import CategoryRow, { CategoryRowSkeleton } from '@/components/CategoryRow';
 
 // Date formatter function
 function formatDate(date) {
@@ -16,11 +17,36 @@ function formatDate(date) {
   });
 }
 
+// Async component for Tech category
+async function TechCategory() {
+  const result = await getBlogsByCategory('Tech', 6);
+  return <CategoryRow title="Tech" blogs={result.blogs} slug="tech" />;
+}
+
+// Async component for Health category
+async function HealthCategory() {
+  const result = await getBlogsByCategory('Health', 6);
+  return <CategoryRow title="Health" blogs={result.blogs} slug="health" />;
+}
+
+// Async component for Business category
+async function BusinessCategory() {
+  const result = await getBlogsByCategory('Business', 6);
+  return <CategoryRow title="Business" blogs={result.blogs} slug="business" />;
+}
+
+// Async component for Travel category
+async function TravelCategory() {
+  const result = await getBlogsByCategory('Travel', 6);
+  return <CategoryRow title="Travel" blogs={result.blogs} slug="travel" />;
+}
+
 export default async function HomePage() {
   // Fetch latest blogs data
   const result = await getLatestBlogs();
   const blogsData = await getPublishedBlogs(20);
   const categoriesResult = await getAllCategoriesList();
+  const travelResult = await getTravelBlogs(9);
   
   const featuredBlog = result.success ? result.featuredBlog : null;
   const sidebarBlogs = result.success ? result.recentBlogs : [];
@@ -28,6 +54,11 @@ export default async function HomePage() {
   const allBlogsForGrid = blogsData.success ? blogsData.blogs.filter(b => b._id !== featuredBlog?._id) : [];
   const marqueeBlogs = blogsData.success ? blogsData.blogs : [];
   const categories = categoriesResult.success ? categoriesResult.categories : [];
+  
+  // Travel blogs for BBC Travel section
+  const travelBlogs = travelResult.success ? travelResult.blogs : [];
+  const travelHero = travelBlogs[0] || null;
+  const travelGrid = travelBlogs.slice(1) || [];
 
   return (
     <div className="bg-white">
@@ -165,7 +196,27 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Recent Posts Grid Section - 2 Columns with Enhanced Animation */}
+      {/* Tech Category Section with Suspense */}
+      <Suspense fallback={<CategoryRowSkeleton />}>
+        <TechCategory />
+      </Suspense>
+
+      {/* Health Category Section with Suspense */}
+      <Suspense fallback={<CategoryRowSkeleton />}>
+        <HealthCategory />
+      </Suspense>
+
+      {/* Business Category Section with Suspense */}
+      <Suspense fallback={<CategoryRowSkeleton />}>
+        <BusinessCategory />
+      </Suspense>
+
+      {/* Travel Category Section with Suspense */}
+      <Suspense fallback={<CategoryRowSkeleton />}>
+        <TravelCategory />
+      </Suspense>
+
+      {/* Recent Posts Grid Section (keeping existing section) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-slate-900">Recent Posts</h2>
@@ -179,7 +230,7 @@ export default async function HomePage() {
 
         {allBlogsForGrid.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {allBlogsForGrid.slice(0, 12).map((blog) => (
+            {allBlogsForGrid.slice(0, 3).map((blog) => (
               <Link
                 key={blog._id}
                 href={`/blog/${blog.slug || blog._id}`}
@@ -230,9 +281,6 @@ export default async function HomePage() {
           </div>
         )}
       </section>
-
-      {/* Newsletter Subscription Section */}
-      <Newsletter />
 
       {/* Footer */}
       <Footer />

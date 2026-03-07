@@ -18,6 +18,7 @@ const blogSchema = new mongoose.Schema({
     required: [true, 'Slug is required'],
     unique: true,
     lowercase: true,
+    index: true,
   },
   content: {
     type: String,
@@ -41,6 +42,12 @@ const blogSchema = new mongoose.Schema({
     default: '',
     trim: true,
     maxlength: [200, 'Alt text cannot exceed 200 characters'],
+  },
+  featuredImageCaption: {
+    type: String,
+    default: '',
+    trim: true,
+    maxlength: [200, 'Caption cannot exceed 200 characters'],
   },
   tags: [{
     type: String,
@@ -74,12 +81,24 @@ const blogSchema = new mongoose.Schema({
 });
 
 // Create slug from title before saving
-blogSchema.pre('save', function () {
+blogSchema.pre('save', async function () {
+  // Generate clean slug only when creating new blog without slug
   if (!this.slug && this.title) {
-    this.slug = this.title
+    let baseSlug = this.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
+    
+    // Check if slug exists and add suffix only if needed
+    const BlogModel = this.constructor;
+    const existing = await BlogModel.findOne({ slug: baseSlug });
+    
+    if (existing) {
+      const randomSuffix = Math.random().toString(36).substring(2, 6);
+      this.slug = `${baseSlug}-${randomSuffix}`;
+    } else {
+      this.slug = baseSlug;
+    }
   }
   
   if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {

@@ -1,25 +1,20 @@
-# Alt Text Implementation - COMPLETED ✅
+# Blog Homepage Reorganization - TODO
 
-## Admin Side Changes ✅
-- [x] 1. Add featuredImageAlt field in Add Blog Page
-- [x] 2. Add featuredImageAlt field in Edit Blog Page
-- [x] 3. Update Blog View page in dashboard
+## Task: Reorganize blog homepage to show 4 specific categories with 6 posts each in a responsive grid
 
-## User Side Changes - Featured Images ✅
-- [x] 4. Update src/app/page.js - use featuredImageAlt
-- [x] 5. Update src/app/blog/[id]/page.js - use featuredImageAlt
-- [x] 6. Update src/app/categories/page.js - use featuredImageAlt
-- [x] 7. Update src/app/blog/view-all/page.js - use featuredImageAlt
-- [x] 8. Update src/app/tags/[tag]/page.js - use featuredImageAlt
+### Steps Completed:
 
-## User Side Changes - Related/Previous/Next Posts ✅
-- [x] 9. Update related posts in blog details page
-- [x] 10. Update previous/next post images
+- [x] 1. Update blogActions.js with getBlogsByCategory(category, limit) function
+- [x] 2. Create CategoryRow reusable component
+- [x] 3. Create category/[slug] dynamic route page
+- [x] 4. Update Homepage to use CategoryRow with 4 categories
+- [x] 5. Add newsletter subscription section in Footer
+- [x] 6. Create /api/subscribe API endpoint
+- [x] 7. Test and verify the implementation (Build successful!)
 
-## Summary
-All blog images now properly use the featuredImageAlt field. When uploading or selecting images:
-1. The MediaGalleryModal provides the alt text from the media library
-2. The Add Blog and Edit Blog pages have a new "Featured Image Alt Text (SEO)" field
-3. All user-facing blog pages now use `featuredImageAlt || blog.title` as the alt attribute
-4. Related posts, previous/next posts also use the proper alt text
+### Categories to display:
+1. Tech
+2. Health
+3. Business
+4. Travel
 

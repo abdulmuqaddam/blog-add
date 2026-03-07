@@ -19,12 +19,25 @@ const RichTextEditor = forwardRef(function RichTextEditor({ value, onChange, pla
         heading: {
           levels: [1, 2, 3],
         },
+        // Disable default paste handling to avoid issues
+        paste: {
+          HTMLRules: [],
+          textRules: [],
+        },
       }),
       Underline,
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-indigo-600 underline',
+          class: 'text-indigo-600 underline cursor-pointer',
+        },
+        addAttributes: {
+          target: {
+            default: '_blank',
+          },
+          rel: {
+            default: 'noopener noreferrer',
+          },
         },
       }),
       TextAlign.configure({
@@ -52,6 +65,17 @@ const RichTextEditor = forwardRef(function RichTextEditor({ value, onChange, pla
     content: value || '',
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
+    },
+    // Handle paste events properly
+    editorProps: {
+      handlePaste: (view, event, slice) => {
+        // Let TipTap handle the paste normally
+        return false;
+      },
+      attributes: {
+        class: 'prose max-w-none p-4 min-h-[300px] focus:outline-none',
+        style: 'min-height: 300px;',
+      },
     },
   });
 
@@ -116,7 +140,30 @@ const RichTextEditor = forwardRef(function RichTextEditor({ value, onChange, pla
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    // Validate URL
+    try {
+      new URL(url);
+    } catch (e) {
+      alert('Please enter a valid URL (e.g., https://example.com)');
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url, target: '_blank' }).run();
+  };
+
+  // Add Twitter embed
+  const addTwitter = () => {
+    const twitterUrl = window.prompt('Enter Twitter/X URL:');
+    if (twitterUrl) {
+      // Extract tweet ID from URL
+      const tweetMatch = twitterUrl.match(/(twitter\.com|x\.com)\/[\w]+\/status\/(\d+)/);
+      if (tweetMatch) {
+        const tweetId = tweetMatch[2];
+        const embedHtml = `<div class="twitter-embed my-4"><a href="${twitterUrl}" target="_blank" rel="noopener noreferrer">View Tweet</a></div>`;
+        editor.chain().focus().insertContent(embedHtml).run();
+      } else {
+        alert('Please enter a valid Twitter/X post URL');
+      }
+    }
   };
 
   const isActive = (type, attrs) => {
@@ -210,6 +257,9 @@ const RichTextEditor = forwardRef(function RichTextEditor({ value, onChange, pla
         <button type="button" onClick={addImage} className="p-2 rounded hover:bg-slate-200 transition-colors" title="Insert Image">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" /></svg>
         </button>
+        <button type="button" onClick={addTwitter} className="p-2 rounded hover:bg-slate-200 transition-colors" title="Insert Twitter/X Post">
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </button>
 
         <div className="w-px h-6 bg-slate-300 mx-1"></div>
 
@@ -222,7 +272,7 @@ const RichTextEditor = forwardRef(function RichTextEditor({ value, onChange, pla
       </div>
 
       <div className="bg-white">
-        <EditorContent editor={editor} className="prose max-w-none p-4 min-h-[300px] focus:outline-none" style={{ minHeight: '300px' }} />
+        <EditorContent editor={editor} />
       </div>
     </div>
   );

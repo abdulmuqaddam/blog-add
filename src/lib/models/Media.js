@@ -16,6 +16,11 @@ const mediaSchema = new mongoose.Schema({
     trim: true,
     minlength: [3, 'Alt text must be at least 3 characters'],
   },
+  caption: {
+    type: String,
+    trim: true,
+    default: '',
+  },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

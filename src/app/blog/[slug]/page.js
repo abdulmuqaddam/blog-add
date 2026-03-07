@@ -7,7 +7,7 @@ import ViewCounter from '@/components/ViewCounter';
 import Link from 'next/link';
 import Image from 'next/image';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Calendar, Clock, Eye, User } from 'lucide-react';
 
 // Date formatter function
@@ -29,14 +29,19 @@ function calculateReadingTime(content) {
   return minutes === 1 ? '1 min read' : `${minutes} min read`;
 }
 
+// Check if string is a valid MongoDB ObjectId
+function isValidObjectId(str) {
+  return /^[0-9a-fA-F]{24}$/.test(str);
+}
+
 // Generate SEO Metadata
 export async function generateMetadata({ params }) {
-  const { id } = await params;
+  const { slug } = await params;
   
-  // Try to get by ID first, then by slug
-  let result = await getBlogById(id);
+  // Try to get by slug first, then by ID (for backward compatibility)
+  let result = await getBlogBySlug(slug);
   if (!result.success) {
-    result = await getBlogBySlug(id);
+    result = await getBlogById(slug);
   }
   
   if (!result.success || !result.blog) {
@@ -63,12 +68,23 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function BlogDetailsPage({ params }) {
-  const { id } = await params;
+  const { slug } = await params;
   
-  // Try to get by ID first, then by slug
-  let result = await getBlogById(id);
+  // Check if accessing via old ID-based URL and redirect to slug URL
+  if (isValidObjectId(slug)) {
+    // Try to find the blog by ID and get its slug
+    const result = await getBlogById(slug);
+    if (result.success && result.blog && result.blog.slug) {
+      // Permanent redirect to the clean slug URL
+      redirect(`/blog/${result.blog.slug}`);
+    }
+  }
+  
+  // Try to get by slug first
+  let result = await getBlogBySlug(slug);
   if (!result.success) {
-    result = await getBlogBySlug(id);
+    // Fallback to ID lookup for backward compatibility
+    result = await getBlogById(slug);
   }
   
   if (!result.success || !result.blog) {
@@ -169,14 +185,22 @@ export default async function BlogDetailsPage({ params }) {
 
               {/* Header Image */}
               {blog.featuredImage && (
-                <div className="relative aspect-[16/9] rounded-2xl overflow-hidden mb-8">
-                  <Image
-                    src={blog.featuredImage}
-                    alt={blog.featuredImageAlt || blog.title}
-                    fill
-                    className="object-cover"
-                    priority
-                  />
+                <div className="mb-8">
+                  <div className="relative aspect-[16/9] rounded-2xl overflow-hidden">
+                    <Image
+                      src={blog.featuredImage}
+                      alt={blog.featuredImageAlt || blog.title}
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                  {/* Caption Display */}
+                  {blog.featuredImageCaption && (
+                    <p className="text-center text-sm text-slate-500 mt-2 italic">
+                      {blog.featuredImageCaption}
+                    </p>
+                  )}
                 </div>
               )}
 
