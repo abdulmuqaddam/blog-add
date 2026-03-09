@@ -1,4 +1,6 @@
-// Subscribers Dashboard Page
+// Force the route to be dynamic to avoid Vercel build errors with cookies
+export const dynamic = 'force-dynamic';
+
 import { getAllSubscribers, getSubscriberCount } from '@/lib/actions/subscriberActions';
 import { getCurrentUser } from '@/lib/actions/authActions';
 import SubscribersTable from '@/components/SubscribersTable';
@@ -6,53 +8,57 @@ import { Mail, Users, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-// Generate Metadata
+// Generate Metadata for SEO
 export const metadata = {
   title: 'Subscribers - Blog Dashboard',
   description: 'Manage newsletter subscribers',
 };
 
 export default async function SubscribersPage() {
+  // getCurrentUser utilizes cookies, so this makes the page dynamic
   const user = await getCurrentUser();
 
-  // Check if user is authenticated
+  // Check if user is authenticated (Admin Logic)
   if (!user) {
     redirect('/dashboard/login');
   }
 
-  // Fetch subscribers data
+  // Fetch subscribers data from IT-Verse-Blog database
   const [subscribersResult, countResult] = await Promise.all([
     getAllSubscribers(),
     getSubscriberCount()
   ]);
 
-  const subscribers = subscribersResult.success ? subscribersResult.subscribers : [];
-  const activeCount = countResult.success ? countResult.count : 0;
+  // Fallback to empty arrays/zeros if fetching fails
+  const subscribers = subscribersResult?.success ? subscribersResult.subscribers : [];
+  const activeCount = countResult?.success ? countResult.count : 0;
+  const unsubscribedCount = subscribers.filter(s => s.status === 'unsubscribed').length;
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       {/* Page Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Newsletter Subscribers</h1>
-            <p className="text-gray-500 mt-1">Manage your email subscribers</p>
+            <p className="text-gray-500 mt-1">Manage your email subscribers efficiently</p>
           </div>
           <Link 
             href="/dashboard"
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-center sm:text-left"
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-center font-medium"
           >
             Back to Dashboard
           </Link>
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Fully Responsive Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
-        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+        {/* Total Subscribers Card */}
+        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-indigo-100 text-sm">Total Subscribers</p>
+              <p className="text-indigo-100 text-sm font-medium">Total Subscribers</p>
               <p className="text-3xl font-bold mt-1">{subscribers.length}</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
@@ -61,10 +67,11 @@ export default async function SubscribersPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl p-6 text-white">
+        {/* Active Subscribers Card */}
+        <div className="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm">Active Subscribers</p>
+              <p className="text-green-100 text-sm font-medium">Active Subscribers</p>
               <p className="text-3xl font-bold mt-1">{activeCount}</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
@@ -73,13 +80,12 @@ export default async function SubscribersPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 text-white sm:col-span-2 lg:col-span-1">
+        {/* Unsubscribed Card */}
+        <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-xl p-6 text-white shadow-lg sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-orange-100 text-sm">Unsubscribed</p>
-              <p className="text-3xl font-bold mt-1">
-                {subscribers.filter(s => s.status === 'unsubscribed').length}
-              </p>
+              <p className="text-orange-100 text-sm font-medium">Unsubscribed</p>
+              <p className="text-3xl font-bold mt-1">{unsubscribedCount}</p>
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
               <Mail className="w-6 h-6" />
@@ -88,9 +94,10 @@ export default async function SubscribersPage() {
         </div>
       </div>
 
-      {/* Subscribers Table with Export Buttons */}
-      <SubscribersTable initialSubscribers={subscribers} />
+      {/* Subscribers Table Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <SubscribersTable initialSubscribers={subscribers} />
+      </div>
     </div>
   );
 }
-
