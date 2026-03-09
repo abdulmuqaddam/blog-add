@@ -1,11 +1,14 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { Suspense } from 'react';
 import { getLatestBlogs, getPublishedBlogs, getAllCategoriesList, getTravelBlogs, getBlogsByCategory } from '@/lib/actions/blogActions';
+import { getPublishedVideos } from '@/lib/actions/videoActions';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CategoryPills from '@/components/CategoryPills';
 import CategoryRow, { CategoryRowSkeleton } from '@/components/CategoryRow';
+import { Play, Calendar } from 'lucide-react';
 
 // Date formatter function
 function formatDate(date) {
@@ -15,6 +18,33 @@ function formatDate(date) {
     month: 'short',
     day: 'numeric',
   });
+}
+
+// Optimized: Fetch all data in parallel using Promise.all
+async function fetchAllData() {
+  const [
+    latestResult,
+    blogsData,
+    categoriesResult,
+    travelResult,
+    videosResult
+  ] = await Promise.all([
+    getLatestBlogs(),
+    getPublishedBlogs(20),
+    getAllCategoriesList(),
+    getTravelBlogs(9),
+    getPublishedVideos(8)
+  ]);
+  
+  return {
+    featuredBlog: latestResult.success ? latestResult.featuredBlog : null,
+    sidebarBlogs: latestResult.success ? latestResult.recentBlogs : [],
+    allBlogsForGrid: blogsData.success ? blogsData.blogs : [],
+    marqueeBlogs: blogsData.success ? blogsData.blogs : [],
+    categories: categoriesResult.success ? categoriesResult.categories : [],
+    travelBlogs: travelResult.success ? travelResult.blogs : [],
+    videos: videosResult.success ? videosResult.videos : []
+  };
 }
 
 // Async component for Tech category
@@ -42,21 +72,17 @@ async function TravelCategory() {
 }
 
 export default async function HomePage() {
-  // Fetch latest blogs data
-  const result = await getLatestBlogs();
-  const blogsData = await getPublishedBlogs(20);
-  const categoriesResult = await getAllCategoriesList();
-  const travelResult = await getTravelBlogs(9);
+  // Fetch all data in parallel - much faster!
+  const data = await fetchAllData();
   
-  const featuredBlog = result.success ? result.featuredBlog : null;
-  const sidebarBlogs = result.success ? result.recentBlogs : [];
-  // Combine sidebar blogs and remaining blogs for the grid (exclude the featured one)
-  const allBlogsForGrid = blogsData.success ? blogsData.blogs.filter(b => b._id !== featuredBlog?._id) : [];
-  const marqueeBlogs = blogsData.success ? blogsData.blogs : [];
-  const categories = categoriesResult.success ? categoriesResult.categories : [];
+  const featuredBlog = data.featuredBlog;
+  const sidebarBlogs = data.sidebarBlogs;
+  const allBlogsForGrid = data.allBlogsForGrid.filter(b => b._id !== featuredBlog?._id);
+  const marqueeBlogs = data.marqueeBlogs;
+  const categories = data.categories;
+  const travelBlogs = data.travelBlogs;
+  const videos = data.videos;
   
-  // Travel blogs for BBC Travel section
-  const travelBlogs = travelResult.success ? travelResult.blogs : [];
   const travelHero = travelBlogs[0] || null;
   const travelGrid = travelBlogs.slice(1) || [];
 
@@ -215,6 +241,78 @@ export default async function HomePage() {
       <Suspense fallback={<CategoryRowSkeleton />}>
         <TravelCategory />
       </Suspense>
+
+      {/* Videos Section - BBC Urdu/News Portal Style */}
+      {videos.length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-slate-50">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">Videos</h2>
+              <p className="text-slate-500 text-sm mt-1">Watch our latest videos</p>
+            </div>
+            <Link
+              href="/videos"
+              className="text-indigo-600 font-semibold hover:text-indigo-700 transition-colors"
+            >
+              View All →
+            </Link>
+          </div>
+
+          {/* Video Grid - Responsive BBC Style */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {videos.map((video) => (
+              <Link
+                key={video._id}
+                href={`/videos/${video.slug}`}
+                className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300"
+              >
+                {/* Thumbnail with Play Overlay */}
+                <div className="relative aspect-video overflow-hidden">
+                  {video.thumbnail ? (
+                    <img
+                      src={video.thumbnail}
+                      alt={video.thumbnailAlt || video.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                      <Play className="w-12 h-12 text-indigo-300" />
+                    </div>
+                  )}
+                  {/* Play Icon Overlay */}
+                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                    <div className="w-14 h-14 bg-white/90 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Play className="w-6 h-6 text-indigo-600 ml-1" fill="currentColor" />
+                    </div>
+                  </div>
+                  {/* Duration Badge */}
+                  {video.duration && (
+                    <span className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded font-medium">
+                      {video.duration}
+                    </span>
+                  )}
+                </div>
+
+                {/* Video Info */}
+                <div className="p-4">
+                  <h3 className="font-bold text-slate-900 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                    {video.title}
+                  </h3>
+                  {video.titleUrdu && (
+                    <p className="text-sm text-slate-500 mt-1 line-clamp-1 font-urdu" dir="rtl">
+                      {video.titleUrdu}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-3 text-slate-400 text-sm">
+                    <Calendar className="w-4 h-4" />
+                    <span>{formatDate(video.createdAt)}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recent Posts Grid Section (keeping existing section) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

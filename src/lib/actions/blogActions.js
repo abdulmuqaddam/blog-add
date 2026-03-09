@@ -177,7 +177,7 @@ export async function updateBlog(blogId, blogData) {
       return { success: false, message: 'Not authorized to update this blog' };
     }
     
-    const updatedBlog = await Blog.findByIdAndUpdate(blogId, blogData, { new: true });
+    const updatedBlog = await Blog.findByIdAndUpdate(blogId, blogData, { returnDocument: 'after' });
     
     return { success: true, message: 'Blog updated successfully', blog: JSON.parse(JSON.stringify(updatedBlog)) };
   } catch (error) {
@@ -264,7 +264,7 @@ export async function toggleBlogStatus(blogId) {
     const updatedBlog = await Blog.findByIdAndUpdate(
       blogId,
       { isActive: !blog.isActive },
-      { new: true }
+      { returnDocument: 'after' }
     );
     
     return { 
@@ -483,7 +483,7 @@ export async function incrementViews(blogId) {
     const updatedBlog = await Blog.findByIdAndUpdate(
       blogId,
       { $inc: { views: 1 } },
-      { new: true }
+      { returnDocument: 'after' }
     );
     
     if (!updatedBlog) {
@@ -516,7 +516,8 @@ async function processScheduledBlogs() {
       { 
         status: 'published',
         publishedAt: now
-      }
+      },
+      { returnDocument: 'after' }
     );
   } catch (error) {
     console.error('Process scheduled blogs error:', error);
@@ -741,6 +742,61 @@ export async function getBlogsByCategory(category, limit = 6) {
   } catch (error) {
     console.error('Get blogs by category error:', error);
     return { success: false, message: `Failed to fetch ${category} blogs`, blogs: [] };
+  }
+}
+
+/**
+ * Search blogs by query
+ * @param {string} query - Search query string
+ * @param {number} limit - Number of blogs to fetch (default 20)
+ * @returns {Object} Object with blogs array
+ */
+export async function searchBlogs(query, limit = 20) {
+  try {
+    await dbConnect();
+    
+    if (!query || query.trim().length === 0) {
+      return { success: true, blogs: [], message: 'No search query provided' };
+    }
+    
+    // Split query into words and create regex for each
+    const searchWords = query.trim().split(/\s+/).filter(word => word.length > 0);
+    
+    if (searchWords.length === 0) {
+      return { success: true, blogs: [], message: 'No search query provided' };
+    }
+    
+    // Create OR conditions for each word - partial match enabled
+    const orConditions = searchWords.map(word => {
+      const wordRegex = new RegExp(word, 'i'); // Case insensitive partial match
+      return {
+        $or: [
+          { title: wordRegex },
+          { content: wordRegex },
+          { tags: wordRegex },
+          { category: wordRegex },
+          { subHeading: wordRegex }
+        ]
+      };
+    });
+    
+    const blogs = await Blog.find({
+      status: 'published',
+      isActive: true,
+      $or: orConditions.flatMap(condition => condition.$or)
+    })
+      .populate('author', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit);
+    
+    return { 
+      success: true, 
+      blogs: JSON.parse(JSON.stringify(blogs)),
+      query: query
+    };
+  } catch (error) {
+    console.error('Search blogs error:', error);
+    return { success: false, message: 'Failed to search blogs', blogs: [] };
   }
 }
 

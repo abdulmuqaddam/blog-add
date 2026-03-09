@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Plus, Eye, LogOut, User, Users, Mail } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Plus, Eye, LogOut, User, Users, Mail, Video } from 'lucide-react';
 
 export default function Sidebar({ user, handleLogout }) {
   const [blogDropdownOpen, setBlogDropdownOpen] = useState(false);
@@ -63,6 +63,17 @@ export default function Sidebar({ user, handleLogout }) {
               </li>
             </ul>
           )}
+        </li>
+
+        {/* Videos Link */}
+        <li>
+          <Link 
+            href="/dashboard/videos" 
+            className="block p-2 hover:bg-gray-200 rounded flex items-center gap-2 transition-all duration-200 hover:translate-x-1 hover:shadow-sm cursor-pointer"
+          >
+            <Video className="w-5 h-5" />
+            Videos
+          </Link>
         </li>
 
         {/* Users Dropdown - Clickable */}
