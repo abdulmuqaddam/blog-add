@@ -9,16 +9,40 @@ import { cookies } from 'next/headers';
 import { verifyToken } from '../auth';
 
 /**
- * Get all blog posts (for admin dashboard)
- * @returns {Array} Array of all blog posts
+ * Get all blog posts (for admin dashboard) with pagination
+ * @param {number} page - Page number (default 1)
+ * @param {number} limit - Number of blogs per page (default 12)
+ * @returns {Object} Object with blogs array and pagination info
  */
-export async function getAllBlogsForAdmin() {
+export async function getAllBlogsForAdmin(page = 1, limit = 12) {
   try {
     await dbConnect();
-    const blogs = await Blog.find()
-      .populate('author', 'name email')
-      .sort({ createdAt: -1 });
-    return { success: true, blogs: JSON.parse(JSON.stringify(blogs)) };
+    
+    const skip = (page - 1) * limit;
+    
+    const [blogs, total] = await Promise.all([
+      Blog.find()
+        .populate('author', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Blog.countDocuments()
+    ]);
+    
+    const totalPages = Math.ceil(total / limit);
+    
+    return { 
+      success: true, 
+      blogs: JSON.parse(JSON.stringify(blogs)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    };
   } catch (error) {
     console.error('Get all blogs error:', error);
     return { success: false, message: 'Failed to fetch blogs' };

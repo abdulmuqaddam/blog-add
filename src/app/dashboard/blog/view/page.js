@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getAllBlogsForAdmin, deleteBlog, toggleBlogStatus } from '@/lib/actions/blogActions';
 import Link from 'next/link';
-import { Edit, Trash2, Eye, Calendar, Clock, Tag } from 'lucide-react';
+import { Edit, Trash2, Eye, Calendar, Clock, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import CategoryManager from '@/components/CategoryManager';
 
 export default function ViewBlogsPage() {
@@ -11,17 +11,23 @@ export default function ViewBlogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalBlogs, setTotalBlogs] = useState(0);
+  const blogsPerPage = 12;
 
   useEffect(() => {
-    fetchBlogs();
-  }, []);
+    fetchBlogs(currentPage);
+  }, [currentPage]);
 
-  const fetchBlogs = async () => {
+  const fetchBlogs = async (page = 1) => {
     try {
       setLoading(true);
-      const result = await getAllBlogsForAdmin();
+      const result = await getAllBlogsForAdmin(page, blogsPerPage);
       if (result.success) {
         setBlogs(result.blogs);
+        setTotalPages(result.pagination.totalPages);
+        setTotalBlogs(result.pagination.total);
       } else {
         setError(result.message);
       }
@@ -39,7 +45,7 @@ export default function ViewBlogsPage() {
       const result = await deleteBlog(blogId);
       if (result.success) {
         alert('Blog deleted successfully');
-        fetchBlogs();
+        fetchBlogs(currentPage);
       } else {
         alert(`Error: ${result.message}`);
       }
@@ -53,13 +59,56 @@ export default function ViewBlogsPage() {
       const result = await toggleBlogStatus(blogId);
       if (result.success) {
         alert(result.message);
-        fetchBlogs();
+        fetchBlogs(currentPage);
       } else {
         alert(`Error: ${result.message}`);
       }
     } catch (err) {
       alert('Failed to update blog status');
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Generate pagination numbers to display
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
   };
 
   const formatDate = (date) => {
@@ -133,7 +182,7 @@ export default function ViewBlogsPage() {
       <div className="text-center py-12">
         <p className="text-red-500 text-lg">{error}</p>
         <button
-          onClick={fetchBlogs}
+          onClick={() => fetchBlogs(currentPage)}
           className="mt-4 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
         >
           Try Again
@@ -177,112 +226,175 @@ export default function ViewBlogsPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {blogs.map((blog) => (
-            <div
-              key={blog._id}
-              className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow group"
-            >
-              {/* Thumbnail - Clickable */}
-              <Link href={`/dashboard/blog/${blog._id}`} className="block">
-                <div className="relative h-48 bg-slate-100">
-                  {blog.featuredImage ? (
-                    <img
-                      src={blog.featuredImage}
-                      alt={blog.featuredImageAlt || blog.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400">
-                      <Eye className="w-12 h-12" />
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {blogs.map((blog) => (
+              <div
+                key={blog._id}
+                className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow group"
+              >
+                {/* Thumbnail - Clickable */}
+                <Link href={`/dashboard/blog/${blog._id}`} className="block">
+                  <div className="relative h-48 bg-slate-100">
+                    {blog.featuredImage ? (
+                      <img
+                        src={blog.featuredImage}
+                        alt={blog.featuredImageAlt || blog.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <Eye className="w-12 h-12" />
+                      </div>
+                    )}
+                    {/* Status Badge */}
+                    <div className="absolute top-3 right-3">
+                      {getStatusBadge(blog)}
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Content - Clickable */}
+                <Link href={`/dashboard/blog/${blog._id}`} className="block p-4">
+                  <h3 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                    {blog.title}
+                  </h3>
+                  {blog.subHeading && (
+                    <p className="text-slate-500 text-sm mb-3 line-clamp-2">
+                      {blog.subHeading}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-4 text-slate-400 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      <span>{formatDate(blog.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span>{formatDateTime(blog.createdAt)}</span>
+                    </div>
+                  </div>
+                  {blog.category && (
+                    <div className="mt-2">
+                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
+                        {blog.category}
+                      </span>
                     </div>
                   )}
-                  {/* Status Badge */}
-                  <div className="absolute top-3 right-3">
-                    {getStatusBadge(blog)}
-                  </div>
-                </div>
-              </Link>
+                </Link>
 
-              {/* Content - Clickable */}
-              <Link href={`/dashboard/blog/${blog._id}`} className="block p-4">
-                <h3 className="font-bold text-slate-900 text-lg mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                  {blog.title}
-                </h3>
-                {blog.subHeading && (
-                  <p className="text-slate-500 text-sm mb-3 line-clamp-2">
-                    {blog.subHeading}
-                  </p>
-                )}
-                <div className="flex items-center gap-4 text-slate-400 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>{formatDate(blog.createdAt)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span>{formatDateTime(blog.createdAt)}</span>
-                  </div>
-                </div>
-                {blog.category && (
-                  <div className="mt-2">
-                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">
-                      {blog.category}
+                {/* Footer with Controls */}
+                <div className="px-4 pb-4 border-t border-slate-100 pt-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {/* Toggle Switch */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleToggleStatus(blog._id);
+                      }}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        blog.isActive ? 'bg-emerald-600' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          blog.isActive ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                    <span className="text-xs text-slate-500">
+                      {blog.isActive ? 'Published' : 'Pending'}
                     </span>
                   </div>
-                )}
-              </Link>
 
-              {/* Footer with Controls */}
-              <div className="px-4 pb-4 border-t border-slate-100 pt-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {/* Toggle Switch */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleToggleStatus(blog._id);
-                    }}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      blog.isActive ? 'bg-emerald-600' : 'bg-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        blog.isActive ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-xs text-slate-500">
-                    {blog.isActive ? 'Published' : 'Pending'}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {/* Edit Button */}
-                  <Link
-                    href={`/dashboard/blog/edit/${blog._id}`}
-                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                    title="Edit"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Link>
-                  {/* Delete Button */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleDelete(blog._id);
-                    }}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Edit Button */}
+                    <Link
+                      href={`/dashboard/blog/edit/${blog._id}`}
+                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                      title="Edit"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Link>
+                    {/* Delete Button */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDelete(blog._id);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Beautiful Centered Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-12 flex justify-center">
+              <div className="flex items-center gap-2">
+                {/* Previous Button */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === 1
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-white text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm border border-slate-200'
+                  }`}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((page, index) => (
+                    page === '...' ? (
+                      <span key={`ellipsis-${index}`} className="px-3 py-2 text-slate-500">...</span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`min-w-[40px] h-10 flex items-center justify-center rounded-lg font-medium transition-all ${
+                          currentPage === page
+                            ? 'bg-indigo-600 text-white shadow-md'
+                            : 'bg-white text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm border border-slate-200'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  ))}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`flex items-center gap-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === totalPages
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-white text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 shadow-sm border border-slate-200'
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+
+          {/* Showing info */}
+          <div className="text-center mt-4 text-slate-500 text-sm">
+            Showing {((currentPage - 1) * blogsPerPage) + 1} to {Math.min(currentPage * blogsPerPage, totalBlogs)} of {totalBlogs} blogs
+          </div>
+        </>
       )}
 
       {/* Category Manager Modal */}
