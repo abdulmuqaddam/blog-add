@@ -223,39 +223,41 @@ export default async function BlogDetailsPage({ params }) {
             {/* Sidebar - Sticky */}
             <div className="lg:col-span-1">
               <div className="sticky top-24">
-                {/* Related Posts - Grid Layout */}
+                {/* Related Posts - Grid Layout - Hero Card Style */}
                 <div className="bg-slate-50 rounded-xl p-6">
                   <h3 className="text-lg font-bold text-slate-900 mb-4">
                     Related Posts
                   </h3>
                   {relatedBlogs.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {relatedBlogs.map((relatedBlog) => (
                         <Link
                           key={relatedBlog._id}
                           href={`/blog/${relatedBlog.slug || relatedBlog._id}`}
-                          className="group"
+                          className="group bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl hover:scale-105 transition-all duration-300"
                         >
-                          <div className="relative h-24 rounded-lg overflow-hidden mb-2">
+                          <div className="relative aspect-[4/3] overflow-hidden">
                             {relatedBlog.featuredImage ? (
                               <Image
                                 src={relatedBlog.featuredImage}
                                 alt={relatedBlog.featuredImageAlt || relatedBlog.title}
                                 fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                className="object-cover group-hover:scale-110 transition-transform duration-500"
                               />
                             ) : (
-                              <div className="w-full h-full bg-indigo-100 flex items-center justify-center">
-                                <span className="text-2xl">📄</span>
+                              <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                                <span className="text-4xl">📄</span>
                               </div>
                             )}
                           </div>
-                          <h4 className="font-semibold text-slate-900 text-xs line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                            {relatedBlog.title}
-                          </h4>
-                          <p className="text-slate-500 text-xs mt-1">
-                            {formatDate(relatedBlog.createdAt)}
-                          </p>
+                          <div className="p-4">
+                            <h4 className="font-bold text-slate-900 text-sm line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                              {relatedBlog.title}
+                            </h4>
+                            <p className="text-slate-500 text-xs mt-2">
+                              {formatDate(relatedBlog.createdAt)}
+                            </p>
+                          </div>
                         </Link>
                       ))}
                     </div>

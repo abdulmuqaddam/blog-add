@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { getAllVideos, deleteVideo, toggleVideoStatus } from '@/lib/actions/videoActions';
 import Link from 'next/link';
 import { Plus, Trash2, Calendar, Clock, Play, Eye, Edit, ToggleLeft, ToggleRight } from 'lucide-react';
+import { CardGridSkeleton } from '@/components/SkeletonCard';
 
 export default function VideosPage() {
   const [videos, setVideos] = useState([]);
@@ -106,8 +107,64 @@ export default function VideosPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <div className="h-9 bg-slate-200 rounded w-24 mb-2 animate-pulse" />
+            <div className="h-5 bg-slate-200 rounded w-48 animate-pulse" />
+          </div>
+          <div className="h-12 bg-slate-200 rounded-xl w-40 animate-pulse" />
+        </div>
+        <div className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Thumbnail</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Title</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 hidden md:table-cell">Duration</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 hidden lg:table-cell">Date & Time</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="relative w-32 h-20 bg-slate-200 rounded-lg animate-pulse" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-2">
+                        <div className="h-4 bg-slate-200 rounded w-48 animate-pulse" />
+                        <div className="h-3 bg-slate-200 rounded w-32 animate-pulse" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 hidden md:table-cell">
+                      <div className="h-4 bg-slate-200 rounded w-16 animate-pulse" />
+                    </td>
+                    <td className="px-6 py-4 hidden lg:table-cell">
+                      <div className="space-y-2">
+                        <div className="h-3 bg-slate-200 rounded w-24 animate-pulse" />
+                        <div className="h-2 bg-slate-200 rounded w-20 animate-pulse" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="h-6 bg-slate-200 rounded-full w-20 animate-pulse" />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse" />
+                        <div className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse" />
+                        <div className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   }

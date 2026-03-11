@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getAllUsers, createUser, updateUser, deleteUser, toggleUserActive } from '@/lib/actions/userActions';
 import { Users, Edit, Trash2, ToggleLeft, ToggleRight, Upload, X, Mail, Phone, MapPin, User as UserIcon, Calendar, Shield } from 'lucide-react';
+import { TableSkeleton } from '@/components/SkeletonCard';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -358,9 +359,11 @@ export default function UsersPage() {
             </div>
 
             {loading ? (
-              <div className="p-8 text-center">
-                <div className="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="mt-2 text-slate-500">Loading users...</p>
+              <div className="p-6">
+                <div className="mb-6 flex justify-between">
+                  <div className="h-8 bg-slate-200 rounded w-32 animate-pulse" />
+                </div>
+                <TableSkeleton rows={5} columns={6} />
               </div>
             ) : users.length === 0 ? (
               <div className="p-8 text-center">
