@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { createBlog, getAllCategoriesList } from '@/lib/actions/blogActions';
 import { useRouter } from 'next/navigation';
-import { Upload, X, Calendar, Loader2, Tag, Plus, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Calendar, Loader2, Tag, Plus, Image as ImageIcon, Search, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import CategoryManager from '@/components/CategoryManager';
 import MediaGalleryModal from '@/components/MediaGalleryModal';
@@ -18,6 +18,7 @@ export default function AddBlogPage() {
   const [categories, setCategories] = useState([]);
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(true);
+  const [seoSectionOpen, setSeoSectionOpen] = useState(true);
   const editorRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -30,6 +31,13 @@ export default function AddBlogPage() {
     featuredImageCaption: '',
     status: 'draft',
     scheduledAt: '',
+    // SEO Fields
+    metaDescription: '',
+    focusKeywords: [],
+    focusKeywordInput: '',
+    schemaType: 'Article',
+    videoEmbedUrl: '',
+    videoDuration: '',
   });
 
   // Fetch categories from database
@@ -332,6 +340,196 @@ export default function AddBlogPage() {
               placeholder={tags.length === 0 ? "Type tag and press Enter..." : ""}
             />
           </div>
+        </div>
+
+        {/* SEO Section - Collapsible */}
+        <div className="border-2 border-slate-200 rounded-xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setSeoSectionOpen(!seoSectionOpen)}
+            className="w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <Search className="w-5 h-5 text-indigo-600" />
+              <span className="font-semibold text-slate-800">Search Engine Optimization</span>
+            </div>
+            {seoSectionOpen ? (
+              <ChevronUp className="w-5 h-5 text-slate-500" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-slate-500" />
+            )}
+          </button>
+
+          {seoSectionOpen && (
+            <div className="p-6 space-y-6 bg-white">
+              {/* Google Search Preview */}
+              <div className="bg-slate-50 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-blue-500" />
+                  Google Search Preview
+                </h4>
+                <div className="bg-white rounded-lg border border-slate-200 p-4">
+                  <div className="text-lg text-blue-700 hover:underline cursor-pointer truncate">
+                    {formData.title || 'Your Blog Title'}
+                  </div>
+                  <div className="text-sm text-green-700 truncate">
+                    yourdomain.com/blog/{formData.title ? formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : 'your-blog-slug'}
+                  </div>
+                  <div className="text-sm text-slate-600 mt-1 line-clamp-2">
+                    {formData.metaDescription || formData.subHeading || 'Your meta description will appear here. Add a compelling description to improve click-through rates from search engines.'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Focus Keywords - Tag Style */}
+              <div>
+                <label htmlFor="focusKeywordInput" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Focus Keywords - Press Enter to add
+                </label>
+                <div className="border-2 border-slate-200 rounded-xl focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100 transition-all p-2">
+                  {/* Keywords Display */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(formData.focusKeywords || []).map((keyword, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm"
+                      >
+                        {keyword}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newKeywords = formData.focusKeywords.filter((_, i) => i !== index);
+                            setFormData((prev) => ({ ...prev, focusKeywords: newKeywords }));
+                          }}
+                          className="hover:bg-purple-200 rounded-full p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  {/* Keyword Input */}
+                  <input
+                    type="text"
+                    id="focusKeywordInput"
+                    value={formData.focusKeywordInput || ''}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, focusKeywordInput: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        const newKeyword = formData.focusKeywordInput?.trim();
+                        if (newKeyword && !(formData.focusKeywords || []).includes(newKeyword)) {
+                          setFormData((prev) => ({ 
+                            ...prev, 
+                            focusKeywords: [...(prev.focusKeywords || []), newKeyword],
+                            focusKeywordInput: ''
+                          }));
+                        }
+                      } else if (e.key === 'Backspace' && !formData.focusKeywordInput && (formData.focusKeywords || []).length > 0) {
+                        setFormData((prev) => ({ 
+                          ...prev, 
+                          focusKeywords: prev.focusKeywords.slice(0, -1)
+                        }));
+                      }
+                    }}
+                    className="w-full px-2 py-1 focus:outline-none"
+                    placeholder={(formData.focusKeywords || []).length === 0 ? "Type keyword and press Enter..." : ""}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Add keywords you want this blog to rank for</p>
+              </div>
+
+              {/* Meta Description */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="metaDescription" className="block text-sm font-semibold text-slate-700">
+                    Meta Description
+                  </label>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    (formData.metaDescription || '').length > 160 
+                      ? 'bg-red-100 text-red-700' 
+                      : (formData.metaDescription || '').length > 120 
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-green-100 text-green-700'
+                  }`}>
+                    {(formData.metaDescription || '').length}/160
+                  </span>
+                </div>
+                <textarea
+                  id="metaDescription"
+                  name="metaDescription"
+                  value={formData.metaDescription}
+                  onChange={handleChange}
+                  rows={3}
+                  maxLength={165}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
+                  placeholder="Enter a compelling meta description (max 160 characters)"
+                />
+                <div className="flex items-center gap-2 mt-1">
+                  {(formData.metaDescription || '').length > 160 && (
+                    <span className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Description exceeds 160 characters
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Schema Type */}
+              <div>
+                <label htmlFor="schemaType" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Schema Type
+                </label>
+                <select
+                  id="schemaType"
+                  name="schemaType"
+                  value={formData.schemaType}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all bg-white"
+                >
+                  <option value="Article">Article</option>
+                  <option value="NewsArticle">News Article</option>
+                  <option value="VideoObject">Video Object</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">Select the appropriate schema type for structured data</p>
+              </div>
+
+              {/* Video Object Fields - Conditional */}
+              {formData.schemaType === 'VideoObject' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                  <div>
+                    <label htmlFor="videoEmbedUrl" className="block text-sm font-semibold text-slate-700 mb-2">
+                      Video Embed URL
+                    </label>
+                    <input
+                      type="url"
+                      id="videoEmbedUrl"
+                      name="videoEmbedUrl"
+                      value={formData.videoEmbedUrl}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all"
+                      placeholder="https://www.youtube.com/embed/..."
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="videoDuration" className="block text-sm font-semibold text-slate-700 mb-2">
+                      Video Duration
+                    </label>
+                    <input
+                      type="text"
+                      id="videoDuration"
+                      name="videoDuration"
+                      value={formData.videoDuration}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all"
+                      placeholder="MM:SS or HH:MM:SS"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Example: 5:30 or 1:30:00</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Status & Schedule */}

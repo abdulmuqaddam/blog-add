@@ -57,6 +57,40 @@ const blogSchema = new mongoose.Schema({
     type: String,
     default: 'General',
   },
+  
+  // SEO Fields - Yoast-style
+  metaDescription: {
+    type: String,
+    maxlength: [160, 'Meta description cannot exceed 160 characters'],
+    default: '',
+    trim: true,
+  },
+  focusKeyword: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  focusKeywords: [{
+    type: String,
+    trim: true,
+  }],
+  schemaType: {
+    type: String,
+    enum: ['Article', 'NewsArticle', 'VideoObject'],
+    default: 'Article',
+  },
+  // Video-specific fields for VideoObject schema
+  videoEmbedUrl: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  videoDuration: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  
   status: {
     type: String,
     enum: ['draft', 'published', 'archived', 'scheduled'],

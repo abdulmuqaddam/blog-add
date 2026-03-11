@@ -4,6 +4,7 @@ import BlogTags from '@/components/BlogTags';
 import ScrollProgress from '@/components/ScrollProgress';
 import SocialShare from '@/components/SocialShare';
 import ViewCounter from '@/components/ViewCounter';
+import BlogSchema from '@/components/BlogSchema';
 import Link from 'next/link';
 import Image from 'next/image';
 import { sanitizeHtml } from '@/lib/sanitize';
@@ -51,18 +52,40 @@ export async function generateMetadata({ params }) {
   }
   
   const blog = result.blog;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://yourdomain.com';
+  
+  // Use metaDescription if available, otherwise fallback to subHeading or content
+  const metaDescription = blog.metaDescription || blog.subHeading || blog.excerpt || blog.content?.substring(0, 160) || 'Read this blog post on Blogify';
   
   return {
     title: `${blog.title} - Blogify`,
-    description: blog.subHeading || blog.content?.substring(0, 160) || 'Read this blog post on Blogify',
-    keywords: blog.tags?.join(', ') || blog.category || '',
+    description: metaDescription,
+    keywords: blog.focusKeyword || blog.tags?.join(', ') || blog.category || '',
     openGraph: {
       title: blog.title,
-      description: blog.subHeading || blog.content?.substring(0, 160) || '',
-      images: blog.featuredImage ? [blog.featuredImage] : [],
-      type: 'article',
-      publishedTime: blog.createdAt,
+      description: metaDescription,
+      images: blog.featuredImage ? [{
+        url: blog.featuredImage,
+        width: 1200,
+        height: 630,
+        alt: blog.featuredImageAlt || blog.title,
+      }] : [],
+      type: blog.schemaType === 'VideoObject' ? 'video.other' : 'article',
+      publishedTime: blog.publishedAt || blog.createdAt,
       authors: [blog.author?.name || 'Blogify'],
+      siteName: 'Blogify',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: blog.title,
+      description: metaDescription,
+      images: blog.featuredImage ? [blog.featuredImage] : [],
+    },
+    other: {
+      'article:published_time': blog.publishedAt || blog.createdAt,
+      'article:author': blog.author?.name || 'Blogify',
+      'article:section': blog.category || 'General',
+      ...(blog.focusKeyword && { 'article:tag': blog.focusKeyword }),
     },
   };
 }
@@ -118,6 +141,9 @@ export default async function BlogDetailsPage({ params }) {
       
       <div className="min-h-screen bg-white">
         <Navbar />
+        
+        {/* SEO Schema - JSON-LD */}
+        <BlogSchema blog={blog} />
         
         {/* Breadcrumbs */}
         <div className="pt-24 pb-6 bg-slate-50">
