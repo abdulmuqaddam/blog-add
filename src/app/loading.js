@@ -1,11 +1,16 @@
 'use client';
 
+import { CardGridSkeleton } from '@/components/SkeletonCard';
+
 export default function Loading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="flex flex-col items-center">
-        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="text-slate-600 text-sm mt-4 font-medium">Loading...</p>
+    <div className="min-h-screen bg-white pt-24">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <div className="h-9 bg-slate-200 rounded w-32 mb-2 animate-pulse" />
+          <div className="h-5 bg-slate-200 rounded w-48 animate-pulse" />
+        </div>
+        <CardGridSkeleton count={8} />
       </div>
     </div>
   );
